@@ -11,6 +11,8 @@ reconstruir contexto.
 | ------------------ | ----------------------------------------------------------- |
 | Supabase (proyecto) | `nitro_web` — ref `zdhdhlqnwubckdnqonxp`, región `us-east-1` |
 | Supabase (URL)     | `https://zdhdhlqnwubckdnqonxp.supabase.co`                   |
+| Tenant del piloto  | `Coffee Maker Pro` — slug `coffee-maker-pro`, plan `piloto`, id `0e0a8c41-6c10-4ae0-89a3-04f74355931c` |
+| Owner del piloto   | `juanarangopm@gmail.com` — user id `6cac3932-847a-49f5-b1a1-f67c918fb0eb` |
 | Organización       | `juanarangoecommerce` (`gwrdzmsgcxlobkbtrcdh`)               |
 | Equipo Vercel      | `seller360grados-projects` (`team_CmYLrlLBZUveo9wuFhaJ2rOy`) |
 | Repo de referencia | `github.com/juanarangoceo/cafetera_espresso` (público)       |
@@ -68,6 +70,17 @@ desde el navegador:
 3. `insert into tenant_members (tenant_id, user_id, role) values (..., 'owner')`.
 4. `insert into profiles (user_id, display_name)`.
 5. Registrar la acción en `audit_log`.
+
+Los pasos 2 a 5 van en **una sola sentencia** con CTEs que modifican datos: si
+falla cualquiera, no queda un tenant sin owner ni un owner sin perfil.
+
+Mientras no exista `apps/dashboard`, el paso 1 se hace con
+`POST /auth/v1/admin/users` y `email_confirm: true`, **sin enviar invitación**: el
+correo llevaría a una pantalla de acceso que todavía no existe. La contraseña se
+define cuando esa pantalla exista. Para clientes reales, ya con dashboard, vale la
+invitación por correo tal cual dice el paso 1.
+
+Ejecutado una vez: ver "Infraestructura provisionada" para el tenant del piloto.
 
 ## R4 — Publicar una versión de plantilla
 

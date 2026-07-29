@@ -5,9 +5,9 @@
 
 - **Última actualización:** 2026-07-29
 - **Fase actual:** piloto validable (§19.1 de la especificación)
-- **Estado:** cimientos + renderer público completos y verificados, y **el esquema ya
-  está aplicado en Supabase**. Falta el dashboard, la capa de IA y la bandeja de
-  pedidos.
+- **Estado:** cimientos + renderer público completos y verificados; **el esquema está
+  aplicado en Supabase y el tenant del piloto creado**. Falta sembrar la plantilla, el
+  dashboard, la capa de IA y la bandeja de pedidos.
 
 **Verificación al cierre de esta fase:**
 
@@ -18,6 +18,7 @@ next build (renderer)        → compila
 ./scripts/validate-sql.sh    → 24 tablas con RLS; AISLAMIENTO MULTI-TENANT: OK
 Supabase (zdhdhlqnwubckdnqonxp) → 24 tablas, 24 con RLS, 37 políticas, 0 grants a anon
 get_advisors(security)       → sin bloqueantes (ver §2, "Esquema en Supabase")
+REST con la clave publicable → 42501 en toda tabla; solo responden las dos funciones
 ```
 
 ---
@@ -174,15 +175,20 @@ considera asignable a `Json`. Ambos corregidos.
 
 En orden. El orden importa: viene de §20 de la especificación.
 
-### 3.1 Crear el tenant inicial — *siguiente paso inmediato*
+### 3.1 Sembrar la plantilla `coffee-maker` 1.0.0 — *siguiente paso inmediato*
 
-El esquema ya está en Supabase, pero la base está vacía de datos de negocio: no hay
-tenant, ni usuario, ni plantilla registrada. Sin eso no se puede publicar nada ni
-probar el renderer contra datos reales.
+El tenant del piloto ya existe (R3 ejecutado), pero `templates` y
+`template_versions` están vacías, así que todavía no se puede crear un sitio: `sites`
+exige una `template_version_id`.
 
-Procedimiento en [`RUNBOOKS.md`](RUNBOOKS.md) → R3. Requiere `SUPABASE_SECRET_KEY`,
-que sigue sin configurarse (ver §7). Después de R3 hay que sembrar la versión de
-plantilla `coffee-maker` 1.0.0 desde `packages/templates` con R4.
+Hay que llevar el manifest, el `content_schema` y el `default_content` que ya viven en
+`packages/templates/src/coffee-maker/` a la base, y publicar la versión siguiendo
+[`RUNBOOKS.md`](RUNBOOKS.md) → R4. El paso 2 de R4 no es formalidad: `component_key`
+debe existir en el registro del renderer (`apps/renderer/src/templates/registry.tsx`)
+o la publicación falla.
+
+Conviene que sea un script reproducible en `scripts/`, no SQL escrito a mano: la
+plantilla se va a resembrar cada vez que cambie de versión.
 
 ### 3.2 Caché del renderer
 
@@ -266,8 +272,8 @@ tmux attach -t nitro_web     # sesión de trabajo persistente
 
 | Riesgo                                   | Estado                                                    |
 | ---------------------------------------- | --------------------------------------------------------- |
-| Base sin tenant ni plantilla sembrada    | Esquema aplicado; faltan R3 y R4                          |
+| Base sin plantilla sembrada              | R3 hecho; falta R4                                        |
 | Dominio operativo sin definir            | `nitrolanding.co` es un placeholder — ver DECISIONES       |
-| `SUPABASE_SECRET_KEY` no configurada     | Obtener del panel y ponerla solo en el dashboard. **Bloquea R3.** |
+| Owner del piloto sin contraseña          | Usuario creado y confirmado; se define al existir el dashboard |
 | Modelo de Gemini                         | La spec nombra `gemini-3.6-flash`; verificar disponibilidad |
 | Proveedor de correo y de pagos sin elegir | Bloquea la v1, no el piloto                               |
