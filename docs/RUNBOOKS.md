@@ -15,6 +15,8 @@ reconstruir contexto.
 | Owner del piloto   | `juanarangopm@gmail.com` — user id `6cac3932-847a-49f5-b1a1-f67c918fb0eb` |
 | Organización       | `juanarangoecommerce` (`gwrdzmsgcxlobkbtrcdh`)               |
 | Equipo Vercel      | `seller360grados-projects` (`team_CmYLrlLBZUveo9wuFhaJ2rOy`) |
+| Repositorio        | `github.com/juanarangoceo/bitro_web` (público), rama `master` |
+| Proyecto Vercel    | `nitro-web-renderer` (`prj_G35tI9H8Ei0Ph6Jezcdzy7j2XZmp`), raíz `apps/renderer` |
 | Repo de referencia | `github.com/juanarangoceo/cafetera_espresso` (público)       |
 
 > El proyecto Supabase de **Nitro Bot** (`snbxdzytpwibctepuiwq`) es intocable.
@@ -190,3 +192,29 @@ Dos proyectos separados, cada uno con sus propias variables (ver
 
 El wildcard `*.nitrolanding.co` se configura **solo** en el proyecto del
 renderer. El dominio corporativo nunca apunta al renderer.
+
+### Estado del renderer
+
+Creado y conectado a GitHub, con rama de producción `master` y raíz
+`apps/renderer`. La raíz del monorepo **no** está enlazada a ningún proyecto: si
+lo estuviera, un `vercel deploy` desde ahí subiría el repo entero como si fuera
+la app.
+
+Un `git push` a `master` dispara producción. No se despliega con `vercel --prod`
+desde una máquina local; para forzar un build sin push, se dispara desde Git con
+la API de despliegues, que es Vercel construyendo el repo y no una subida local.
+
+**Deployment Protection: `all_except_custom_domains`.** Es el ajuste correcto y
+no hay que quitarlo: las landings en dominios de clientes se sirven públicas,
+mientras que las URLs `*.vercel.app` del proyecto quedan tras el SSO del equipo.
+Desactivarlo del todo publicaría las URLs internas sin ninguna ganancia.
+
+Variables cargadas en `production` y `development`: `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` y
+`NITRO_WEB_ROOT_DOMAIN`.
+
+**`preview` quedó a propósito sin credenciales.** §14.3 exige que preview y
+producción usen credenciales distintas, y hoy solo existe un proyecto Supabase.
+Cargar ahí las de producción convertiría cualquier rama en acceso total a los
+datos reales de los clientes. Un despliegue de preview fallará con "Falta la
+variable de entorno", que es el fallo correcto: ruidoso y sin exponer nada.
