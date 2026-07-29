@@ -35,6 +35,9 @@ importers:
 
   apps/dashboard:
     dependencies:
+      '@nitro-web/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@nitro-web/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -136,6 +139,18 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+
+  packages/ai:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
 
   packages/contracts:
     dependencies:

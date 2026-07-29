@@ -1,11 +1,14 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
+import { PROMPT_VERSION, generarContenido } from '@nitro-web/ai';
 import {
+  buildAiJsonSchema,
   compileContentValidator,
+  mergeAiContent,
   parseContentSchema,
   type ContentSchema,
 } from '@nitro-web/contracts';
-import { hasPendingChanges, publishSite, type Json } from '@nitro-web/db';
+import { hasPendingChanges, publishSite, rollbackSite, type Json } from '@nitro-web/db';
 import { AvisoSoloLectura, Shell } from '@/components/Shell';
 import { CampoEditor, type OpcionAsset } from '@/components/CampoEditor';
 import { codificarNombre, elementosDe, filasDeLista, interpretarFormulario, valorDe } from '@/lib/formulario';
@@ -70,6 +73,10 @@ export default async function SitioPage({ params, searchParams }: Props) {
       a.width && a.height ? ` (${a.width}×${a.height})` : ''
     }`,
   }));
+
+  const { data: historial } = await supabase.from('site_publications')
+    .select('id, publication_number, published_at')
+    .eq('site_id', id).order('publication_number', { ascending: false }).limit(10);
 
   const pendientes = hasPendingChanges({
     draftUpdatedAt: borrador?.updated_at ?? null,
@@ -188,6 +195,91 @@ export default async function SitioPage({ params, searchParams }: Props) {
     }
 
     redirect(`/sitios/${id}?ok=publicado`);
+  }
+
+  async function revertir(formData: FormData) {
+    'use server';
+    const s = await requerirSesion();
+    if (!puedeEditar(s)) redirect(`/sitios/${id}?error=permiso`);
+    const publicacionId = String(formData.get('publication_id') ?? '');
+    const db = await supabaseServidor();
+    const resultado = await rollbackSite(db, id, publicacionId);
+    if (!resultado.ok) redirect(`/sitios/${id}?error=rollback`);
+    redirect(`/sitios/${id}?ok=rollback`);
+  }
+
+  async function generarConIa(formData: FormData) {
+    'use server';
+    const s = await requerirSesion();
+    if (!puedeEditar(s)) redirect(`/sitios/${id}?error=permiso`);
+    const brief = String(formData.get('brief') ?? '').trim();
+    const seccion = String(formData.get('seccion') ?? '').trim();
+    if (brief.length < 30 || brief.length > 4_000) redirect(`/sitios/${id}?error=brief`);
+    const apiKey = process.env.GEMINI_API_KEY;
+    const model = process.env.GEMINI_MODEL ?? 'gemini-3.6-flash';
+    if (!apiKey) redirect(`/sitios/${id}?error=ia_config`);
+
+    const db = await supabaseServidor();
+    const { data: fila } = await db.from('sites')
+      .select('template_versions:template_version_id ( content_schema, manifest_json ), site_content_drafts ( content_json, revision )')
+      .eq('id', id).maybeSingle();
+    const tv = primero(fila?.template_versions);
+    const actual = primero(fila?.site_content_drafts);
+    if (!tv || !actual) redirect(`/sitios/${id}?error=ia`);
+    const esquema = parseContentSchema(tv.content_schema);
+    const manifest = tv.manifest_json as { ai_sections?: unknown } | null;
+    const permitidas = Array.isArray(manifest?.ai_sections)
+      ? manifest.ai_sections.filter((v): v is string => typeof v === 'string')
+      : esquema.sections.filter((v) => v.aiGeneratable !== false).map((v) => v.key);
+    if (seccion && !permitidas.includes(seccion)) redirect(`/sitios/${id}?error=ia_seccion`);
+
+    type Reserva = { generation_id: string; used: number; monthly_limit: number };
+    type Rpc = (nombre: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+    const rpc = db.rpc.bind(db) as unknown as Rpc;
+    const { data: reservaCruda, error: errorReserva } = await rpc('reserve_ai_generation', {
+      p_site_id: id, p_mode: seccion ? 'section' : 'full', p_target_key: seccion || null,
+      p_model: model, p_prompt_version: PROMPT_VERSION,
+    });
+    const reserva = Array.isArray(reservaCruda) ? reservaCruda[0] as Reserva | undefined : undefined;
+    if (errorReserva || !reserva) redirect(`/sitios/${id}?error=ia_cuota`);
+    const terminar = (estado: 'ok' | 'invalid_output' | 'error', datos: {
+      input?: number | null; output?: number | null; latency?: number | null;
+      cost?: number | null; result?: Record<string, unknown> | null; error?: string | null;
+    }) => rpc('finish_ai_generation', {
+      p_generation_id: reserva.generation_id, p_status: estado,
+      p_input_tokens: datos.input ?? null, p_output_tokens: datos.output ?? null,
+      p_latency_ms: datos.latency ?? null, p_cost_micros: datos.cost ?? null,
+      p_result_json: datos.result ?? null, p_error_message: datos.error ?? null,
+    });
+
+    try {
+      const generado = await generarContenido({
+        apiKey, model, brief,
+        jsonSchema: buildAiJsonSchema(esquema, seccion ? [seccion] : permitidas) as unknown as Record<string, unknown>,
+        currentContent: actual.content_json as Record<string, unknown>,
+        targetSection: seccion || undefined,
+      });
+      const fusionado = mergeAiContent(esquema,
+        actual.content_json as Record<string, Record<string, unknown>>, generado.contenido);
+      const validado = compileContentValidator(esquema, 'draft').safeParse(fusionado);
+      if (!validado.success) {
+        await terminar('invalid_output', { result: generado.contenido, error: validado.error.message,
+          input: generado.tokensEntrada, output: generado.tokensSalida,
+          latency: generado.latenciaMs, cost: generado.costoMicros });
+        redirect(`/sitios/${id}?error=ia_salida`);
+      }
+      const { error } = await db.from('site_content_drafts').update({
+        content_json: JSON.parse(JSON.stringify(validado.data)) as Json,
+        revision: actual.revision + 1, updated_by: s.userId,
+      }).eq('site_id', id);
+      if (error) throw new Error(error.message);
+      await terminar('ok', { result: generado.contenido, input: generado.tokensEntrada,
+        output: generado.tokensSalida, latency: generado.latenciaMs, cost: generado.costoMicros });
+    } catch (error) {
+      await terminar('error', { error: error instanceof Error ? error.message.slice(0, 500) : 'Error desconocido' });
+      redirect(`/sitios/${id}?error=ia`);
+    }
+    redirect(`/sitios/${id}?ok=ia`);
   }
 
   return (
@@ -309,6 +401,41 @@ export default async function SitioPage({ params, searchParams }: Props) {
         {editable && <button type="submit" className="boton-secundario">Guardar oferta</button>}
       </form>
 
+      {editable && (historial ?? []).length > 1 && (
+        <form action={revertir} className="tarjeta mb-6 flex flex-wrap items-end gap-3 p-5">
+          <label className="min-w-56 flex-1"><span className="etiqueta">Restaurar publicación anterior</span>
+            <select name="publication_id" className="campo mt-1" required>
+              {(historial ?? []).filter((p) => p.id !== sitio.published_publication_id).map((p) => (
+                <option key={p.id} value={p.id}>Publicación #{p.publication_number} · {new Date(p.published_at).toLocaleString('es-CO')}</option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="boton-secundario">Restaurar</button>
+          <p className="w-full ayuda">No borra nada: mueve la versión pública al snapshot elegido.</p>
+        </form>
+      )}
+
+      {editable && (
+        <form action={generarConIa} className="tarjeta mb-6 space-y-4 border border-brand-200 p-5">
+          <div><h2 className="font-medium">Asistente de contenido con IA</h2>
+            <p className="ayuda">Describe producto, público, beneficios, objeciones, tono y afirmaciones demostrables. La IA nunca cambia precios, imágenes ni testimonios.</p>
+          </div>
+          <textarea name="brief" required minLength={30} maxLength={4000} rows={6}
+            className="campo" placeholder="Ej.: Cafetera semiautomática para personas que quieren preparar espresso en casa..." />
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="min-w-56 flex-1 text-sm"><span className="etiqueta">Alcance</span>
+              <select name="seccion" className="campo mt-1"><option value="">Landing completa</option>
+                {schema.sections.filter((v) => v.aiGeneratable !== false).map((v) => (
+                  <option key={v.key} value={v.key}>Solo {v.label}</option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="boton-primario">Generar borrador</button>
+          </div>
+          <p className="ayuda">Cada envío consume una generación mensual. Revisa el resultado antes de publicar.</p>
+        </form>
+      )}
+
       <form action={guardar} className="space-y-6">
         {schema.sections.map((seccion) => (
           <section key={seccion.key} className="tarjeta p-5">
@@ -400,12 +527,21 @@ function Avisos({ avisos }: { avisos: { error?: string; ok?: string; detalle?: s
     invalid_content: 'Falta contenido obligatorio para publicar.',
     not_found: 'No se encontró el sitio.',
     error: 'No se pudo completar la operación.',
+    brief: 'Describe mejor el producto: entre 30 y 4.000 caracteres.',
+    ia_config: 'La IA todavía no tiene GEMINI_API_KEY configurada.',
+    ia_cuota: 'No hay cuota de IA disponible o alcanzaste el límite mensual.',
+    ia_seccion: 'Esa sección no está habilitada para generación.',
+    ia_salida: 'La IA devolvió contenido que no cumple el contrato. No se guardó.',
+    ia: 'No se pudo generar contenido. Intenta de nuevo.',
+    rollback: 'No se pudo restaurar esa publicación.',
   };
 
   const exitos: Record<string, string> = {
     guardado: 'Cambios guardados.',
     oferta: 'Oferta guardada.',
     publicado: 'Publicado. Ya es la versión pública.',
+    ia: 'Borrador generado con IA y guardado. Revísalo antes de publicar.',
+    rollback: 'Publicación anterior restaurada.',
   };
 
   if (avisos.ok && exitos[avisos.ok]) {
