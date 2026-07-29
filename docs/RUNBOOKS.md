@@ -61,7 +61,7 @@ Solo después de que R1 pase en verde.
 4. `pnpm typecheck`. Los tipos generados son la red que detecta que el código y
    el esquema se separaron; si compilaba antes y ahora no, el error es real.
 
-Estado actual: aplicado hasta `0009_search_path.sql`.
+Estado actual: aplicado hasta `0012_ai_quota.sql`.
 
 ## R3 — Crear el tenant inicial (§2.1)
 
@@ -117,7 +117,11 @@ ni `resolveSiteByPreviewToken` filtran por estado de la versión, así que un si
 puede previsualizarse contra una versión en desarrollo: es justo lo que permite
 cumplir el paso 3 antes del 5.
 
-Sembrada: `coffee-maker` 1.0.0 en `development`.
+Versión vigente: `coffee-maker` 1.1.0. Para migrar deliberadamente el sitio piloto:
+
+```bash
+pnpm db:migrate-coffee-v11
+```
 
 **No altera sitios existentes.** Un sitio queda fijado a su
 `template_version_id` (§7.3). Publicar 1.1 no migra los sitios en 1.0.
@@ -211,9 +215,10 @@ no hay que quitarlo: las landings en dominios de clientes se sirven públicas,
 mientras que las URLs `*.vercel.app` del proyecto quedan tras el SSO del equipo.
 Desactivarlo del todo publicaría las URLs internas sin ninguna ganancia.
 
-Variables cargadas en `production` y `development`: `NEXT_PUBLIC_SUPABASE_URL`,
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` y
-`NITRO_WEB_ROOT_DOMAIN`.
+Variables del renderer cargadas en producción: `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`,
+`NITRO_WEB_ROOT_DOMAIN` y `CACHE_REVALIDATION_SECRET`. El dashboard no recibe
+`SUPABASE_SECRET_KEY`; sus operaciones usan la sesión y RLS.
 
 **`preview` quedó a propósito sin credenciales.** §14.3 exige que preview y
 producción usen credenciales distintas, y hoy solo existe un proyecto Supabase.

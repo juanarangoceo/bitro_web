@@ -19,13 +19,14 @@ que no necesita, no debe tenerlo.
 | -------------------------------------- | :------: | :-------: | ---------- |
 | `NEXT_PUBLIC_SUPABASE_URL`             |    ✅    |    ✅     | Pública    |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |    ✅    |    ✅     | Pública    |
-| `SUPABASE_SECRET_KEY`                  |    ✅    |    ✅     | **Secreta** |
+| `SUPABASE_SECRET_KEY`                  |    ✅    |    ❌     | **Secreta** |
 | `GEMINI_API_KEY`                       |    ❌    |    ✅     | **Secreta** |
 | `GEMINI_MODEL`                         |    ❌    |    ✅     | Servidor   |
 | `VERCEL_TOKEN`                         |    ❌    |    ✅     | **Secreta** |
 | `VERCEL_TEAM_ID`                       |    ❌    |    ✅     | Servidor   |
 | `VERCEL_RENDERER_PROJECT_ID`           |    ❌    |    ✅     | Servidor   |
 | `NITRO_WEB_ROOT_DOMAIN`                |    ✅    |    ✅     | Servidor   |
+| `CACHE_REVALIDATION_SECRET`            |    ✅    |    ✅     | **Secreta** |
 | `NITRO_WEB_CORPORATE_DOMAIN`           |    ❌    |    ✅     | Servidor   |
 | `WHATSAPP_TEMPLATE_DEFAULT`            |    ❌    |    ✅     | Servidor   |
 | `EMAIL_PROVIDER_KEY`                   |    ❌    |    ✅     | **Secreta** |

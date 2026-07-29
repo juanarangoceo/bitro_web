@@ -10,15 +10,15 @@
  */
 
 import type { TemplateManifest } from '@nitro-web/contracts';
-import { coffeeMakerManifest } from './coffee-maker/manifest';
+import { coffeeMakerManifestV11 } from './coffee-maker/manifest-v1-1';
 
 /** Manifests conocidos, indexados por `template_key`. */
 export const TEMPLATE_MANIFESTS: Readonly<Record<string, TemplateManifest>> = {
-  'coffee-maker': coffeeMakerManifest,
+  'coffee-maker': coffeeMakerManifestV11,
 };
 
 /** Claves de componente que el renderer sabe dibujar. */
-export const REGISTERED_COMPONENT_KEYS: readonly string[] = ['coffeeMakerV1'];
+export const REGISTERED_COMPONENT_KEYS: readonly string[] = ['coffeeMakerV1', 'coffeeMakerV11'];
 
 /**
  * ¿El renderer puede dibujar este `component_key`?

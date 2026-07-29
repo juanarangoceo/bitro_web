@@ -12,7 +12,7 @@
 **Verificación al cierre de esta fase:**
 
 ```
-pnpm test                    → 68 pruebas en verde
+pnpm test                    → 73 pruebas en verde
 pnpm typecheck               → sin errores
 next build (renderer)        → compila
 ./scripts/validate-sql.sh    → 24 tablas con RLS; AISLAMIENTO MULTI-TENANT: OK
@@ -44,7 +44,7 @@ La especificación completa está en Google Drive (carpeta `openclaw`, file id
 ### Monorepo
 
 pnpm workspaces, Node 22, TypeScript estricto (`noUncheckedIndexedAccess`),
-Vitest. `pnpm test` → **68 pruebas en verde**.
+Vitest. `pnpm test` → **73 pruebas en verde**.
 
 ### `packages/shared`
 
@@ -102,10 +102,10 @@ ok  Un usuario sin sesión no ve nada
 AISLAMIENTO MULTI-TENANT: OK
 ```
 
-### `packages/templates` — plantilla `coffee-maker` 1.0.0
+### `packages/templates` — plantilla `coffee-maker` 1.1.0
 
-Portada del inventario de la landing real. Nueve secciones (`hero`, `problem`,
-`gallery`, `bundle`, `savings`, `social_proof`, `offer`, `faq`, `seo`), seis
+Portada del inventario de la landing real. Once secciones (`hero`, `problem`,
+`gallery`, `hotspots`, `recipes`, `bundle`, `savings`, `social_proof`, `offer`, `faq`, `seo`), ocho
 `asset_slots` con proporciones y tamaños mínimos, y contenido por defecto tomado de la
 página en producción.
 
@@ -127,6 +127,8 @@ Compila y pasa TypeScript. Incluye:
 - Lectura del **snapshot publicado**, nunca del borrador
 - Registro estático de componentes por `component_key`
 - `record_page_view()` sin bloquear el render
+- Caché por hostname con etiqueta por `site_id`; publicar o restaurar invalida
+  únicamente el sitio afectado mediante un endpoint autenticado
 - Ruta de preview por token, con `noindex` por cabecera y por metadatos
 - Plantilla `CoffeeMakerV1` completa, con lectura defensiva del contenido: un campo que
   falta oculta esa parte en vez de tumbar la página
@@ -208,7 +210,7 @@ Lo que hay:
 | `/login` | Contraseña o enlace por correo |
 | `/` | Listado de landings + creación desde plantilla publicada |
 | `/sitios/[id]` | Editor generado desde `content_schema`, oferta, publicar, preview |
-| `/sitios/[id]/imagenes` | Subida por `asset_slot` con sus requisitos del manifest |
+| `/sitios/[id]/imagenes` | Subida y borrado seguro por `asset_slot`; no borra assets usados por borradores o snapshots |
 | `/sitios/[id]/pedidos` | Bandeja con estados, wa.me y métricas de 30 días |
 | `/sitios/[id]/pedidos/csv` | Exportación |
 
@@ -239,58 +241,26 @@ Decisiones que conviene no revertir:
 
 ---
 
-## 3. Lo que falta
+## 3. Lo que falta fuera del corte vertical
 
 En orden. El orden importa: viene de §20 de la especificación.
 
-### 3.1 Entrar al dashboard — *primer paso del siguiente agente*
+### 3.1 Acceso
 
-`apps/dashboard` está construido pero **nadie ha entrado todavía**, y no por un fallo:
-el owner del piloto se creó por procedimiento (R3) y **no tiene contraseña**. Las dos
-vías de acceso están implementadas y ninguna funciona tal cual:
-
-- **Contraseña:** no existe. Hay que ponerla. Lo más rápido:
-  ```bash
-  curl -X POST "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/admin/users/<user_id>" \
-    -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY" \
-    -H "Content-Type: application/json" -d '{"password":"<la que elija Juan>"}'
-  ```
-  El `user_id` del owner está en "Infraestructura provisionada".
-  **La contraseña la elige Juan; no inventarla ni dejarla escrita en el repo.**
-- **Enlace por correo:** el código está (`signInWithOtp` → `/auth/confirm`), pero
-  depende del SMTP del proyecto de Supabase, que no está configurado. Ver §25.4.
-
-Verificar después: entrar, ver la landing en el listado, editar un texto, guardar,
-publicar y comprobar que el cambio sale en https://nitro-web-renderer.vercel.app.
+El owner ya inició sesión. No existe una contraseña recuperable: se entra por enlace
+mágico o se crea una nueva mediante recuperación. El recorrido está en
+[`GUIA-ACCESO.md`](GUIA-ACCESO.md). Antes de clientes externos falta conectar un SMTP
+propio; el servicio compartido de Supabase sirve únicamente para pruebas limitadas.
 
 ### 3.1.1 `packages/ai` — completado el 29 jul 2026
 
 `packages/ai` llama a Gemini 3.6 Flash con salida estructurada. El dashboard permite generación global o por sección, reserva cuota de forma atómica y registra modelo, prompt, tokens, latencia, costo y resultado. Los campos de precio, imágenes y testimonios permanecen fuera del alcance del modelo.
 
-### 3.2 Caché del renderer
+### 3.2 Pendientes comerciales
 
-Está decidido el *qué* (caché por `site_id`, invalidada solo al publicar ese sitio) pero
-falta el *cómo*: `revalidateTag` con una etiqueta por `site_id`, o la Runtime Cache API
-de Vercel. Hoy el renderer resuelve en cada petición.
-
-### 3.3 Secciones de la plantilla que quedaron fuera
-
-La landing de referencia tiene tres bloques que no se portaron por no ser esenciales al
-corte vertical. Añadirlos es extender el `content_schema` y el componente:
-
-- **Hotspots del producto** — puntos con coordenadas porcentuales sobre la foto
-- **Recetas** — tarjetas con ingredientes, pasos y "secreto pro", en modal
-- **Contador de cuenta regresiva** — el campo `show_countdown` ya existe en el schema;
-  falta el componente
-
-### 3.4 Pendientes del dashboard
-
-Construido y funcionando, pero sin: generación con IA en el editor (depende de
-`packages/ai`), selector de tenant para un usuario con varias empresas (el piloto
-asume uno), gestión de dominios desde la interfaz (hoy es `pnpm db:seed-domain`),
-rollback desde la interfaz (ya disponible), y borrado de
-imágenes (subir sí, borrar no — falta la comprobación de §9 de que ninguna publicación
-viva la referencia).
+Selector multiempresa, gestión autoservicio de dominios, admin maestro, billing y SMTP
+pertenecen a la v1 comercial. El piloto usa un tenant y el alta de dominios continúa
+mediante `pnpm db:seed-domain`.
 
 ---
 
@@ -329,11 +299,12 @@ Cosas que la especificación asumía y que conviene saber:
 
 ```bash
 pnpm install
-pnpm test                    # 68 pruebas
+pnpm test                    # 73 pruebas
 pnpm typecheck               # paquetes, apps y scripts/
 pnpm db:seed-template        # siembra coffee-maker desde packages/templates (R4)
 pnpm db:seed-site -- --price=490000   # crea sitio, borrador y oferta
 pnpm db:seed-assets -- --hero-mobile=<ruta> --hero-desktop=<ruta>
+pnpm db:migrate-coffee-v11   # migración explícita y auditada; nunca automática
 pnpm db:seed-domain -- --hostname=<host>
 pnpm db:publish-site -- --as=<correo> --reviewed-by="<quién revisó>"
 pnpm dev:dashboard           # puerto 3001 (ojo: suele estar ocupado en local)
@@ -347,8 +318,8 @@ tmux attach -t nitro_web     # sesión de trabajo persistente
 | Riesgo                                   | Estado                                                    |
 | ---------------------------------------- | --------------------------------------------------------- |
 | Sitio sin imágenes                       | Bloquea publicar; requiere definir Storage (§25.11)       |
-| `coffee-maker` 1.0.0 en `development`    | Deliberado: se publica tras verla en preview (R4 pasos 3-4) |
+| `coffee-maker` 1.1.0                      | Se publica tras verla en preview (R4 pasos 3-4) |
 | Dominio operativo sin definir            | `nitrolanding.co` es un placeholder — ver DECISIONES       |
-| Owner del piloto sin contraseña          | Usuario creado y confirmado; se define al existir el dashboard |
+| Owner sin contraseña conocida            | Se accede por enlace mágico o recuperación; nunca se revela un hash |
 | Modelo de Gemini                         | La spec nombra `gemini-3.6-flash`; verificar disponibilidad |
 | Proveedor de correo y de pagos sin elegir | Bloquea la v1, no el piloto                               |

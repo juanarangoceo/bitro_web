@@ -2,9 +2,8 @@
  * Clientes de Supabase para el dashboard.
  *
  * Todos usan la clave **publicable** y la sesión del usuario: RLS decide qué ve
- * y qué puede escribir. El dashboard no toca `SUPABASE_SECRET_KEY` salvo en las
- * dos operaciones que lo exigen (ver `admin.ts`), y esas están aisladas a
- * propósito para que un `grep` las encuentre.
+ * y qué puede escribir. El dashboard no recibe ni toca `SUPABASE_SECRET_KEY`:
+ * elevar permisos aquí anularía la autorización multiempresa que aporta RLS.
  */
 
 import { createBrowserClient, createServerClient } from '@supabase/ssr';

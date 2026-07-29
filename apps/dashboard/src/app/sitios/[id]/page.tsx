@@ -14,6 +14,7 @@ import { CampoEditor, type OpcionAsset } from '@/components/CampoEditor';
 import { codificarNombre, elementosDe, filasDeLista, interpretarFormulario, valorDe } from '@/lib/formulario';
 import { puedeEditar, requerirSesion } from '@/lib/session';
 import { supabaseServidor } from '@/lib/supabase';
+import { invalidarRenderer } from '@/lib/cache-renderer';
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -194,6 +195,7 @@ export default async function SitioPage({ params, searchParams }: Props) {
       redirect(`/sitios/${id}?error=${resultado.code}&detalle=${encodeURIComponent(detalle)}`);
     }
 
+    await invalidarRenderer(id);
     redirect(`/sitios/${id}?ok=publicado`);
   }
 
@@ -205,6 +207,7 @@ export default async function SitioPage({ params, searchParams }: Props) {
     const db = await supabaseServidor();
     const resultado = await rollbackSite(db, id, publicacionId);
     if (!resultado.ok) redirect(`/sitios/${id}?error=rollback`);
+    await invalidarRenderer(id);
     redirect(`/sitios/${id}?ok=rollback`);
   }
 

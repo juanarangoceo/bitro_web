@@ -6,6 +6,7 @@
  */
 
 import { headers } from 'next/headers';
+import { cacheLife, cacheTag } from 'next/cache';
 import { createSecretClient, resolveSiteByHostname, type SiteResolution } from '@nitro-web/db';
 
 /**
@@ -30,7 +31,6 @@ export async function getRequestHostname(): Promise<string | null> {
  */
 export async function resolveCurrentSite(): Promise<SiteResolution> {
   const hostname = await getRequestHostname();
-  const supabase = createSecretClient();
 
   const isLocal =
     process.env.NODE_ENV !== 'production' &&
@@ -39,11 +39,21 @@ export async function resolveCurrentSite(): Promise<SiteResolution> {
   if (isLocal) {
     const devSiteId = process.env.NITRO_WEB_DEV_SITE_ID;
     if (!devSiteId) return { kind: 'not_found' };
-    return resolveDevSite(supabase, devSiteId);
+    return resolveDevSite(createSecretClient(), devSiteId);
   }
 
   if (!hostname) return { kind: 'not_found' };
-  return resolveSiteByHostname(supabase, hostname);
+  return resolveProductionSite(hostname);
+}
+
+async function resolveProductionSite(hostname: string): Promise<SiteResolution> {
+  'use cache';
+  cacheLife({ stale: 60, revalidate: 300, expire: 86_400 });
+  cacheTag(`nitro-hostname-${hostname}`);
+
+  const resolution = await resolveSiteByHostname(createSecretClient(), hostname);
+  if (resolution.kind === 'render') cacheTag(`nitro-site-${resolution.site.siteId}`);
+  return resolution;
 }
 
 /**

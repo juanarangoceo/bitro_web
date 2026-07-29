@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import { createSecretClient, resolveSiteByPreviewToken } from '@nitro-web/db';
 import { renderTemplate } from '@/templates/registry';
 
@@ -18,11 +19,17 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// Un borrador cambia con cada guardado: cachearlo mostraría contenido viejo
-// justo en el momento en que el cliente quiere comprobar su edición.
-export const dynamic = 'force-dynamic';
+export default function PreviewPage(props: {
+  params: Promise<{ token: string }>;
+}) {
+  return (
+    <Suspense fallback={<PreviewLoading />}>
+      <PreviewContent {...props} />
+    </Suspense>
+  );
+}
 
-export default async function PreviewPage({
+async function PreviewContent({
   params,
 }: {
   params: Promise<{ token: string }>;
@@ -38,6 +45,10 @@ export default async function PreviewPage({
       {renderTemplate(resolution.site, { isPreview: true })}
     </>
   );
+}
+
+function PreviewLoading() {
+  return <main className="grid min-h-screen place-items-center bg-coffee-50 text-coffee-600">Cargando vista previa…</main>;
 }
 
 /**

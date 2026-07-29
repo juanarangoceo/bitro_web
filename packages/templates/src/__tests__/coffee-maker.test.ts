@@ -8,6 +8,9 @@ import {
 import { coffeeMakerManifest } from '../coffee-maker/manifest';
 import { coffeeMakerContentSchema } from '../coffee-maker/schema';
 import { coffeeMakerDefaultContent } from '../coffee-maker/default-content';
+import { coffeeMakerManifestV11 } from '../coffee-maker/manifest-v1-1';
+import { coffeeMakerContentSchemaV11 } from '../coffee-maker/schema-v1-1';
+import { coffeeMakerDefaultContentV11 } from '../coffee-maker/default-content-v1-1';
 import { isComponentRegistered } from '../registry';
 
 describe('manifest de coffee-maker', () => {
@@ -101,5 +104,42 @@ describe('alcance de la IA', () => {
     for (const key of coffeeMakerManifest.ai_sections) {
       expect(generables.has(key)).toBe(true);
     }
+  });
+});
+
+describe('coffee-maker 1.1', () => {
+  it('cumple el contrato y tiene un componente registrado', () => {
+    const result = validateManifest(coffeeMakerManifestV11);
+    if (!result.ok) {
+      throw new Error(`Manifest 1.1 inválido:\n  ${result.errors.join('\n  ')}`);
+    }
+
+    expect(coffeeMakerManifestV11.version).toBe('1.1.0');
+    expect(isComponentRegistered(coffeeMakerManifestV11.component_key)).toBe(true);
+    expect(() => parseContentSchema(coffeeMakerContentSchemaV11)).not.toThrow();
+  });
+
+  it('es un borrador válido pero exige las imágenes del cliente para publicar', () => {
+    const draft = compileContentValidator(coffeeMakerContentSchemaV11, 'draft')
+      .safeParse(coffeeMakerDefaultContentV11);
+    expect(draft.success).toBe(true);
+
+    const publication = compileContentValidator(coffeeMakerContentSchemaV11, 'publish')
+      .safeParse(coffeeMakerDefaultContentV11);
+    expect(publication.success).toBe(false);
+    const routes = publication.success
+      ? []
+      : publication.error.issues.map((issue) => issue.path.join('.'));
+    expect(routes).toContain('hero.image_mobile');
+    expect(routes).toContain('hero.image_desktop');
+    expect(routes).toContain('hotspots.image');
+  });
+
+  it('la IA no controla imágenes, coordenadas ni la fecha límite', () => {
+    const schema = JSON.stringify(buildAiJsonSchema(coffeeMakerContentSchemaV11));
+    expect(schema).not.toContain('image_mobile');
+    expect(schema).not.toContain('countdown_ends_at');
+    expect(schema).not.toContain('"x"');
+    expect(schema).not.toContain('"y"');
   });
 });

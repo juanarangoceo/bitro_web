@@ -134,6 +134,37 @@ export default async function ImagenesPage({ params, searchParams }: Props) {
     redirect(`/sitios/${id}/imagenes?ok=subida`);
   }
 
+  async function eliminar(formData: FormData) {
+    'use server';
+
+    const s = await requerirSesion();
+    if (!puedeEditar(s)) redirect(`/sitios/${id}/imagenes?error=permiso`);
+    const assetId = String(formData.get('asset_id') ?? '');
+    const db = await supabaseServidor();
+
+    const [{ data: asset }, { data: borrador }, { data: publicaciones }] = await Promise.all([
+      db.from('assets').select('id, storage_path').eq('id', assetId).eq('site_id', id).maybeSingle(),
+      db.from('site_content_drafts').select('content_json').eq('site_id', id).maybeSingle(),
+      db.from('site_publications').select('content_json').eq('site_id', id),
+    ]);
+    if (!asset) redirect(`/sitios/${id}/imagenes?error=no_encontrada`);
+
+    if (
+      contieneReferencia(borrador?.content_json, assetId) ||
+      (publicaciones ?? []).some((publication) =>
+        contieneReferencia(publication.content_json, assetId),
+      )
+    ) {
+      redirect(`/sitios/${id}/imagenes?error=en_uso`);
+    }
+
+    const { error } = await db.from('assets').delete().eq('id', assetId).eq('site_id', id);
+    if (error) redirect(`/sitios/${id}/imagenes?error=eliminar`);
+    const { error: storageError } = await db.storage.from(BUCKET).remove([asset.storage_path]);
+    if (storageError) console.error(`Quedó un objeto huérfano en Storage: ${asset.storage_path}`);
+    redirect(`/sitios/${id}/imagenes?ok=eliminada`);
+  }
+
   return (
     <Shell
       sesion={sesion}
@@ -142,7 +173,7 @@ export default async function ImagenesPage({ params, searchParams }: Props) {
     >
       {avisos.ok && (
         <p className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-900">
-          Imagen subida.
+          {avisos.ok === 'eliminada' ? 'Imagen eliminada.' : 'Imagen subida.'}
         </p>
       )}
       {avisos.error && (
@@ -155,6 +186,9 @@ export default async function ImagenesPage({ params, searchParams }: Props) {
               tamano: 'La imagen supera los 5 MB.',
               subida: 'No se pudo subir el archivo.',
               registro: 'El archivo se subió pero no se pudo registrar.',
+              en_uso: 'No se puede borrar: el borrador o el historial de publicaciones usa esta imagen.',
+              no_encontrada: 'La imagen no existe o no pertenece a este sitio.',
+              eliminar: 'No se pudo eliminar la imagen.',
             }[avisos.error] ?? 'No se pudo completar la operación.'
           }
           {avisos.detalle && <span className="block text-xs opacity-80">{avisos.detalle}</span>}
@@ -262,6 +296,14 @@ export default async function ImagenesPage({ params, searchParams }: Props) {
                     {Math.round(a.byte_size / 1024)} kB
                   </p>
                   <p className="mt-1 break-all font-mono text-[10px] text-ink-400">{a.id}</p>
+                  {editable ? (
+                    <form action={eliminar} className="mt-3">
+                      <input type="hidden" name="asset_id" value={a.id} />
+                      <button type="submit" className="text-red-700 underline hover:text-red-900">
+                        Eliminar si no está en uso
+                      </button>
+                    </form>
+                  ) : null}
                 </figcaption>
               </figure>
             ))}
@@ -270,6 +312,17 @@ export default async function ImagenesPage({ params, searchParams }: Props) {
       </section>
     </Shell>
   );
+}
+
+function contieneReferencia(valor: unknown, assetId: string): boolean {
+  if (valor === assetId) return true;
+  if (Array.isArray(valor)) return valor.some((item) => contieneReferencia(item, assetId));
+  if (valor && typeof valor === 'object') {
+    return Object.values(valor as Record<string, unknown>).some((item) =>
+      contieneReferencia(item, assetId),
+    );
+  }
+  return false;
 }
 
 function primero<T>(valor: T | T[] | null | undefined): T | undefined {

@@ -3,6 +3,7 @@ import { formatMoney, savingsPercent, type Currency } from '@nitro-web/shared';
 import type { TemplateProps } from '../registry';
 import { assetUrl, bool, list, num, section, text } from '../content';
 import { OrderForm } from './OrderForm';
+import { ContadorOferta, HotspotsInteractivos, RecetasInteractivas } from './InteractiveSections';
 
 /**
  * Plantilla Coffee Maker v1.
@@ -28,6 +29,8 @@ export function CoffeeMakerV1({ site, isPreview }: TemplateProps) {
       <Hero content={content} assets={assets} />
       <Problem content={content} />
       <Gallery content={content} assets={assets} />
+      <Hotspots content={content} assets={assets} />
+      <Recipes content={content} assets={assets} />
       <Bundle content={content} assets={assets} />
       <Savings content={content} />
       <SocialProof content={content} assets={assets} />
@@ -137,6 +140,69 @@ function Hero({ content, assets }: ContentProps & AssetProps) {
             </div>
           )}
         </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function Hotspots({ content, assets }: ContentProps & AssetProps) {
+  const data = section(content, 'hotspots');
+  const image = assetUrl(data.image, assets);
+  const points = list(data, 'points').flatMap((point) => {
+    const title = text(point, 'title');
+    const description = text(point, 'description');
+    const x = num(point, 'x');
+    const y = num(point, 'y');
+    return title && description && x !== undefined && y !== undefined
+      ? [{ title, description, x, y }]
+      : [];
+  });
+  const title = text(data, 'title');
+  if (!image || !title || points.length === 0) return null;
+
+  return (
+    <section className="bg-white px-6 py-20 md:py-28">
+      <header className="mx-auto mb-12 max-w-3xl text-center">
+        {text(data, 'eyebrow') ? <span className="text-sm font-bold uppercase tracking-widest text-gold-600">{text(data, 'eyebrow')}</span> : null}
+        <h2 className="mt-4 font-serif text-3xl font-bold md:text-5xl">{title}</h2>
+        {text(data, 'description') ? <p className="mt-4 text-lg text-coffee-600">{text(data, 'description')}</p> : null}
+      </header>
+      <HotspotsInteractivos image={image} title={title} points={points} />
+    </section>
+  );
+}
+
+function Recipes({ content, assets }: ContentProps & AssetProps) {
+  const data = section(content, 'recipes');
+  const recipes = list(data, 'items').flatMap((item) => {
+    const title = text(item, 'title');
+    const ingredients = text(item, 'ingredients');
+    const steps = text(item, 'steps');
+    if (!title || !ingredients || !steps) return [];
+    return [{
+      title,
+      subtitle: text(item, 'subtitle'),
+      time: text(item, 'time'),
+      ingredients,
+      steps,
+      proSecret: text(item, 'pro_secret'),
+      image: assetUrl(item.image, assets),
+    }];
+  });
+  if (recipes.length === 0) return null;
+  return (
+    <section className="border-t border-coffee-200 bg-coffee-50 px-6 py-20 md:py-28">
+      <div className="mx-auto max-w-7xl">
+        <header className="mx-auto mb-12 max-w-4xl text-center">
+          {text(data, 'eyebrow') ? <span className="text-sm font-bold uppercase tracking-widest text-gold-600">{text(data, 'eyebrow')}</span> : null}
+          <h2 className="mt-4 font-serif text-3xl font-bold md:text-5xl">
+            {text(data, 'title')}
+            {text(data, 'title_highlight') ? <><br /><span className="text-coffee-600">{text(data, 'title_highlight')}</span></> : null}
+          </h2>
+        </header>
+        <RecetasInteractivas recipes={recipes} />
       </div>
     </section>
   );
@@ -576,6 +642,12 @@ function Offer({
 
         <div className="order-1 lg:order-2">
           <div className="relative mx-auto w-full max-w-md rounded-[2rem] border-4 border-gold-500/30 bg-white p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] md:p-8 lg:max-w-none">
+            {bool(offer, 'show_countdown') && text(offer, 'countdown_ends_at') ? (
+              <ContadorOferta
+                endsAt={text(offer, 'countdown_ends_at') ?? ''}
+                label={text(offer, 'countdown_label') ?? 'La oferta termina en'}
+              />
+            ) : null}
             {text(offer, 'stock_note') && (
               <span className="absolute right-0 top-0 rounded-bl-2xl bg-gold-500 px-4 py-2 text-[10px] font-bold tracking-wider text-white">
                 {text(offer, 'stock_note')}
