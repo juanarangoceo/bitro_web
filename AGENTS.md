@@ -48,10 +48,16 @@ marketplace de plantillas.
 
 ```bash
 pnpm test                    # pruebas unitarias
-pnpm typecheck
+pnpm typecheck               # paquetes, apps y scripts/
 ./scripts/validate-sql.sh    # si tocaste SQL: migraciones + aislamiento multi-tenant
 pnpm --filter @nitro-web/renderer exec next build
+pnpm --filter @nitro-web/dashboard exec next build
 ```
+
+**El dashboard nunca usa `createSecretClient()`.** Sus operaciones se apoyan en la
+sesión del usuario para que RLS verifique la pertenencia al tenant: esa comprobación
+ES la autorización. Si una pantalla "no funciona por permisos", la respuesta no es
+subir a la clave secreta.
 
 Si tocaste RLS o cualquier política, `validate-sql.sh` debe terminar con
 `AISLAMIENTO MULTI-TENANT: OK`. Es el criterio de aceptación §22.1.9 y no se marca como
@@ -77,12 +83,14 @@ cumplido sin esa salida en verde.
 
 ```
 apps/renderer     App pública. Resuelve hostname → site_id y renderiza landings.
-apps/dashboard    App privada (pendiente). Auth, editor, pedidos, métricas, IA.
+apps/dashboard    App privada. Auth con @supabase/ssr, editor generado desde el
+                  content_schema, imágenes, publicación, pedidos y métricas.
 packages/shared   Normalización, dinero, atribución, enums. Sin dependencias de framework.
 packages/contracts Contrato de plantilla: manifest, content_schema, validación, JSON Schema para IA.
 packages/db       Migraciones SQL, clientes de Supabase, resolución y publicación.
 packages/templates Manifests y contenido por defecto de cada plantilla.
-packages/ai       Capa de generación con Gemini (pendiente).
+packages/ai       Capa de generación con Gemini (pendiente: es lo único del
+                  piloto que falta por construir).
 ```
 
 Los paquetes se consumen como TypeScript sin build previo, vía `transpilePackages`.

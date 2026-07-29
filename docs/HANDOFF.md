@@ -5,10 +5,10 @@
 
 - **Última actualización:** 2026-07-29
 - **Fase actual:** piloto validable (§19.1 de la especificación)
-- **Estado:** corte vertical completo hasta la puerta de publicar: **esquema aplicado,
-  tenant creado, plantilla sembrada, sitio con imágenes renderizando en preview y
-  borrador que pasa la validación en modo `publish`**. Falta publicar; después el
-  dashboard, la capa de IA y la bandeja de pedidos.
+- **Estado:** corte vertical **cerrado**. La landing del piloto está publicada y
+  pública en https://nitro-web-renderer.vercel.app, y `apps/dashboard` existe con
+  auth, editor, imágenes, publicación, pedidos y métricas. Falta la capa de IA
+  (`packages/ai`) y las decisiones de §25 que siguen abiertas.
 
 **Verificación al cierre de esta fase:**
 
@@ -196,6 +196,41 @@ leer por URL pública, sin credenciales → 200 image/png
 anon listando el bucket          → []
 ```
 
+### `apps/dashboard` — app privada
+
+Next 16 + Tailwind 3 + `@supabase/ssr`. Corre en el puerto 3001
+(`pnpm dev:dashboard`). **Ojo:** en la máquina de Juan ese puerto suele estar tomado
+por otro proyecto; si `curl` devuelve una página ajena, es eso y no un fallo de auth.
+
+Lo que hay:
+
+| Ruta | Qué hace |
+| ---- | -------- |
+| `/login` | Contraseña o enlace por correo |
+| `/` | Listado de landings + creación desde plantilla publicada |
+| `/sitios/[id]` | Editor generado desde `content_schema`, oferta, publicar, preview |
+| `/sitios/[id]/imagenes` | Subida por `asset_slot` con sus requisitos del manifest |
+| `/sitios/[id]/pedidos` | Bandeja con estados, wa.me y métricas de 30 días |
+| `/sitios/[id]/pedidos/csv` | Exportación |
+
+Decisiones que conviene no revertir:
+
+- **El editor se genera, no se escribe.** `src/lib/formulario.ts` traduce entre el
+  `content_schema` y un `<form>` plano con la convención `seccion.campo.indice`. Una
+  plantilla nueva trae su editor sin tocar el dashboard, que es el punto de §7.4.
+- **Todo pasa por la sesión del usuario**, no por la clave secreta. Publicar, guardar y
+  listar se apoyan en RLS: es la comprobación, no un adorno. El dashboard no importa
+  `createSecretClient()` en ninguna parte.
+- **Guardar valida en modo `draft`; publicar en modo `publish`.** Bloquear el guardado
+  por un campo incompleto obligaría a terminar la landing de una sentada.
+- **El CSV antepone `'` a las celdas que empiezan por `= + - @`.** Esos valores los
+  escribe un comprador anónimo en el formulario público, y Excel los ejecutaría como
+  fórmulas.
+- **La auth se comprueba dos veces**: el middleware redirige y cada página vuelve a
+  llamar `requerirSesion()`. Confiar solo en el middleware dejaría cualquier ruta nueva
+  desprotegida por olvido. Verificado: `/`, `/sitios/x` y `/sitios/x/pedidos` devuelven
+  307 a `/login` sin sesión.
+
 ### Infraestructura
 
 - Proyecto Supabase **`nitro_web`** creado: ref `zdhdhlqnwubckdnqonxp`, `us-east-1`.
@@ -209,27 +244,32 @@ anon listando el bucket          → []
 
 En orden. El orden importa: viene de §20 de la especificación.
 
-### 3.1 Dar acceso al sitio publicado — *siguiente paso inmediato*
+### 3.1 Entrar al dashboard — *primer paso del siguiente agente*
 
-El sitio **está publicado**: plantilla `published`, publicación #1 con snapshot
-inmutable, precio congelado en 490000 y revisión R9 registrada. Pero `domains` está
-vacío, y el renderer resuelve por hostname: **una landing sin dominio existe y no se
-ve**. No es un fallo, es el diseño de §6.2.
+`apps/dashboard` está construido pero **nadie ha entrado todavía**, y no por un fallo:
+el owner del piloto se creó por procedimiento (R3) y **no tiene contraseña**. Las dos
+vías de acceso están implementadas y ninguna funciona tal cual:
 
-Desbloquear esto es la decisión §25.1: registrar el dominio operativo y configurar su
-wildcard en el proyecto del renderer. Como puente, se puede registrar
-`nitro-web-renderer.vercel.app` en `domains` para verla ya; queda tras el SSO del
-equipo, así que sirve de revisión interna y no de publicación real.
+- **Contraseña:** no existe. Hay que ponerla. Lo más rápido:
+  ```bash
+  curl -X POST "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/admin/users/<user_id>" \
+    -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY" \
+    -H "Content-Type: application/json" -d '{"password":"<la que elija Juan>"}'
+  ```
+  El `user_id` del owner está en "Infraestructura provisionada".
+  **La contraseña la elige Juan; no inventarla ni dejarla escrita en el repo.**
+- **Enlace por correo:** el código está (`signInWithOtp` → `/auth/confirm`), pero
+  depende del SMTP del proyecto de Supabase, que no está configurado. Ver §25.4.
 
-### 3.1.1 Lo que quedó resuelto de imágenes
+Verificar después: entrar, ver la landing en el listado, editar un texto, guardar,
+publicar y comprobar que el cambio sale en https://nitro-web-renderer.vercel.app.
 
-`pnpm db:seed-assets` sube el archivo, registra la fila en `assets` y escribe el
-`assets.id` en el campo del borrador que corresponde al slot. Las tres cosas van
-juntas o no sirve ninguna: sin la tercera el archivo existe pero la landing no lo
-muestra, y sin la segunda el contenido apunta a un id que no resuelve.
+### 3.1.1 `packages/ai` — lo único del piloto que falta por construir
 
-Las imágenes del piloto salen del repo de referencia, que vende el mismo producto:
-`hero_mobile` 800×1000 y `hero_desktop` 1200×1200, dentro de los mínimos del manifest.
+`buildAiJsonSchema()` ya produce el formato de respuesta y `mergeAiContent()` fusiona
+la salida conservando lo que el modelo no puede escribir. Falta la llamada a Gemini, el
+registro en `ai_generations` (modelo, `prompt_version`, tokens, latencia, costo) y las
+cuotas por tenant. Antes de empezar, verificar que `gemini-3.6-flash` existe (§25.3).
 
 ### 3.2 Caché del renderer
 
@@ -247,23 +287,14 @@ corte vertical. Añadirlos es extender el `content_schema` y el componente:
 - **Contador de cuenta regresiva** — el campo `show_countdown` ya existe en el schema;
   falta el componente
 
-### 3.4 `apps/dashboard`
+### 3.4 Pendientes del dashboard
 
-Auth con `@supabase/ssr`, listado de sitios, creación desde plantilla, editor
-generado desde el `content_schema`, carga de imágenes por `asset_slot`, preview,
-publicación, bandeja de pedidos y métricas.
-
-### 3.5 `packages/ai`
-
-Servicio server-side con Gemini. `buildAiJsonSchema()` ya produce el formato de
-respuesta; falta la llamada, el registro en `ai_generations` (modelo,
-`prompt_version`, tokens, latencia, costo) y las cuotas por tenant.
-
-### 3.6 Bandeja de pedidos y métricas en la interfaz
-
-Formulario público → `create_public_order()`, con honeypot, rate limiting e
-idempotency key. Bandeja con estados, botón `wa.me`, exportación CSV. Dashboard
-con vistas, pedidos, ingresos y conversión desde `site_metrics_daily`.
+Construido y funcionando, pero sin: generación con IA en el editor (depende de
+`packages/ai`), selector de tenant para un usuario con varias empresas (el piloto
+asume uno), gestión de dominios desde la interfaz (hoy es `pnpm db:seed-domain`),
+rollback desde la interfaz (`rollbackSite()` existe pero no tiene botón), y borrado de
+imágenes (subir sí, borrar no — falta la comprobación de §9 de que ninguna publicación
+viva la referencia).
 
 ---
 
@@ -306,6 +337,10 @@ pnpm test                    # 68 pruebas
 pnpm typecheck               # paquetes, apps y scripts/
 pnpm db:seed-template        # siembra coffee-maker desde packages/templates (R4)
 pnpm db:seed-site -- --price=490000   # crea sitio, borrador y oferta
+pnpm db:seed-assets -- --hero-mobile=<ruta> --hero-desktop=<ruta>
+pnpm db:seed-domain -- --hostname=<host>
+pnpm db:publish-site -- --as=<correo> --reviewed-by="<quién revisó>"
+pnpm dev:dashboard           # puerto 3001 (ojo: suele estar ocupado en local)
 ./scripts/validate-sql.sh    # Postgres efímero + migraciones + aislamiento
 
 tmux attach -t nitro_web     # sesión de trabajo persistente
