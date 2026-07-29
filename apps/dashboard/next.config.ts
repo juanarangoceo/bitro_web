@@ -4,6 +4,7 @@ const config: NextConfig = {
   // Igual que en el renderer: los paquetes se consumen como TypeScript sin
   // build previo (ADR 0001).
   transpilePackages: [
+    '@nitro-web/ai',
     '@nitro-web/shared',
     '@nitro-web/contracts',
     '@nitro-web/db',

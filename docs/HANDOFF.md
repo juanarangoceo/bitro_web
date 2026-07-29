@@ -5,10 +5,9 @@
 
 - **Última actualización:** 2026-07-29
 - **Fase actual:** piloto validable (§19.1 de la especificación)
-- **Estado:** corte vertical **cerrado**. La landing del piloto está publicada y
+- **Estado:** corte vertical **cerrado y pulido**. La landing del piloto está publicada y
   pública en https://nitro-web-renderer.vercel.app, y `apps/dashboard` existe con
-  auth, editor, imágenes, publicación, pedidos y métricas. Falta la capa de IA
-  (`packages/ai`) y las decisiones de §25 que siguen abiertas.
+  auth, editor, imágenes, publicación, pedidos y métricas. La capa de IA (`packages/ai`) ya está integrada con cuotas y auditoría; siguen abiertas las decisiones de §25 que requieren definición comercial.
 
 **Verificación al cierre de esta fase:**
 
@@ -264,12 +263,9 @@ vías de acceso están implementadas y ninguna funciona tal cual:
 Verificar después: entrar, ver la landing en el listado, editar un texto, guardar,
 publicar y comprobar que el cambio sale en https://nitro-web-renderer.vercel.app.
 
-### 3.1.1 `packages/ai` — lo único del piloto que falta por construir
+### 3.1.1 `packages/ai` — completado el 29 jul 2026
 
-`buildAiJsonSchema()` ya produce el formato de respuesta y `mergeAiContent()` fusiona
-la salida conservando lo que el modelo no puede escribir. Falta la llamada a Gemini, el
-registro en `ai_generations` (modelo, `prompt_version`, tokens, latencia, costo) y las
-cuotas por tenant. Antes de empezar, verificar que `gemini-3.6-flash` existe (§25.3).
+`packages/ai` llama a Gemini 3.6 Flash con salida estructurada. El dashboard permite generación global o por sección, reserva cuota de forma atómica y registra modelo, prompt, tokens, latencia, costo y resultado. Los campos de precio, imágenes y testimonios permanecen fuera del alcance del modelo.
 
 ### 3.2 Caché del renderer
 
@@ -292,7 +288,7 @@ corte vertical. Añadirlos es extender el `content_schema` y el componente:
 Construido y funcionando, pero sin: generación con IA en el editor (depende de
 `packages/ai`), selector de tenant para un usuario con varias empresas (el piloto
 asume uno), gestión de dominios desde la interfaz (hoy es `pnpm db:seed-domain`),
-rollback desde la interfaz (`rollbackSite()` existe pero no tiene botón), y borrado de
+rollback desde la interfaz (ya disponible), y borrado de
 imágenes (subir sí, borrar no — falta la comprobación de §9 de que ninguna publicación
 viva la referencia).
 
