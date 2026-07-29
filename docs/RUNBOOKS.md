@@ -84,6 +84,11 @@ Ejecutado una vez: ver "Infraestructura provisionada" para el tenant del piloto.
 
 ## R4 — Publicar una versión de plantilla
 
+```bash
+pnpm db:seed-template                 # siembra en development
+pnpm db:seed-template -- --publish    # además la pasa a published
+```
+
 1. Verificar el manifest y el `content_schema` contra el contrato
    (`packages/contracts`).
 2. Confirmar que `component_key` está registrado en el renderer. Un
@@ -92,6 +97,23 @@ Ejecutado una vez: ver "Infraestructura provisionada" para el tenant del piloto.
 4. Revisar presupuesto de peso y que no haya errores de consola ni assets
    faltantes (§21.4).
 5. Pasar la versión a `published` desde el admin.
+
+`scripts/seed-template.ts` automatiza los pasos 1 y 2, y añade la comprobación
+de `min_renderer_version` contra `RENDERER_VERSION`. **Los pasos 3 y 4 siguen
+siendo humanos**: ningún script mira la landing en un teléfono. El paso 5 es
+`--publish`.
+
+Es idempotente: correrlo dos veces no duplica filas. Sobre una versión ya
+publicada **no escribe** y lo dice, porque §7.3 la declara inmutable — corregir
+algo publicado exige subir la versión en el manifest y volver a sembrar.
+
+El orden correcto es sembrar en `development`, crear el sitio contra esa versión,
+verlo en `/preview/<token>` y solo entonces publicar. Ni `resolveSiteByHostname`
+ni `resolveSiteByPreviewToken` filtran por estado de la versión, así que un sitio
+puede previsualizarse contra una versión en desarrollo: es justo lo que permite
+cumplir el paso 3 antes del 5.
+
+Sembrada: `coffee-maker` 1.0.0 en `development`.
 
 **No altera sitios existentes.** Un sitio queda fijado a su
 `template_version_id` (§7.3). Publicar 1.1 no migra los sitios en 1.0.

@@ -5,9 +5,9 @@
 
 - **Última actualización:** 2026-07-29
 - **Fase actual:** piloto validable (§19.1 de la especificación)
-- **Estado:** cimientos + renderer público completos y verificados; **el esquema está
-  aplicado en Supabase y el tenant del piloto creado**. Falta sembrar la plantilla, el
-  dashboard, la capa de IA y la bandeja de pedidos.
+- **Estado:** cimientos + renderer público completos y verificados; **esquema aplicado
+  en Supabase, tenant del piloto creado y plantilla sembrada**. Falta el primer sitio,
+  el dashboard, la capa de IA y la bandeja de pedidos.
 
 **Verificación al cierre de esta fase:**
 
@@ -175,20 +175,25 @@ considera asignable a `Json`. Ambos corregidos.
 
 En orden. El orden importa: viene de §20 de la especificación.
 
-### 3.1 Sembrar la plantilla `coffee-maker` 1.0.0 — *siguiente paso inmediato*
+### 3.1 Crear el primer sitio del piloto — *siguiente paso inmediato*
 
-El tenant del piloto ya existe (R3 ejecutado), pero `templates` y
-`template_versions` están vacías, así que todavía no se puede crear un sitio: `sites`
-exige una `template_version_id`.
+Ya hay tenant (R3) y plantilla sembrada en `development` (R4 pasos 1, 2 y 5 parcial).
+Falta el sitio, que es lo que cierra el corte vertical y permite ejecutar los pasos 3
+y 4 de R4, que son humanos.
 
-Hay que llevar el manifest, el `content_schema` y el `default_content` que ya viven en
-`packages/templates/src/coffee-maker/` a la base, y publicar la versión siguiendo
-[`RUNBOOKS.md`](RUNBOOKS.md) → R4. El paso 2 de R4 no es formalidad: `component_key`
-debe existir en el registro del renderer (`apps/renderer/src/templates/registry.tsx`)
-o la publicación falla.
+En orden:
 
-Conviene que sea un script reproducible en `scripts/`, no SQL escrito a mano: la
-plantilla se va a resembrar cada vez que cambie de versión.
+1. `insert into sites` apuntando a la `template_version_id` sembrada, con
+   `site_content_drafts` inicializado desde `default_content`.
+2. `insert into offers` con el precio real. Sin oferta activa, `publishSite()`
+   rechaza la publicación, y con razón: el total sale de ahí.
+3. Subir las imágenes de los `asset_slots` obligatorios (`hero_mobile`, `hero_desktop`).
+   El `default_content` **no trae imágenes** a propósito, así que hasta ese punto el
+   sitio no es publicable — la validación en modo `publish` lo rechaza.
+4. Verlo en `/preview/<preview_token>` en móvil y escritorio.
+5. Recién entonces `pnpm db:seed-template -- --publish` y publicar el sitio.
+
+Conviene que 1 y 2 sean otro script en `scripts/`, por el mismo motivo que R4.
 
 ### 3.2 Caché del renderer
 
@@ -262,7 +267,8 @@ Cosas que la especificación asumía y que conviene saber:
 ```bash
 pnpm install
 pnpm test                    # 68 pruebas
-pnpm typecheck
+pnpm typecheck               # paquetes, apps y scripts/
+pnpm db:seed-template        # siembra coffee-maker desde packages/templates (R4)
 ./scripts/validate-sql.sh    # Postgres efímero + migraciones + aislamiento
 
 tmux attach -t nitro_web     # sesión de trabajo persistente
@@ -272,7 +278,8 @@ tmux attach -t nitro_web     # sesión de trabajo persistente
 
 | Riesgo                                   | Estado                                                    |
 | ---------------------------------------- | --------------------------------------------------------- |
-| Base sin plantilla sembrada              | R3 hecho; falta R4                                        |
+| Base sin sitio ni oferta                 | R3 y R4 hechos; falta el primer `site` con sus imágenes   |
+| `coffee-maker` 1.0.0 en `development`    | Deliberado: se publica tras verla en preview (R4 pasos 3-4) |
 | Dominio operativo sin definir            | `nitrolanding.co` es un placeholder — ver DECISIONES       |
 | Owner del piloto sin contraseña          | Usuario creado y confirmado; se define al existir el dashboard |
 | Modelo de Gemini                         | La spec nombra `gemini-3.6-flash`; verificar disponibilidad |
