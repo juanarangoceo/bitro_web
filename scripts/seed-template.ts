@@ -38,6 +38,7 @@ try {
 }
 
 const { values } = parseArgs({
+  args: argumentos(),
   options: {
     template: { type: 'string', default: 'coffee-maker' },
     publish: { type: 'boolean', default: false },
@@ -236,6 +237,19 @@ async function registrarEnAuditoria(
  */
 function aJson(valor: unknown): Json {
   return JSON.parse(JSON.stringify(valor)) as Json;
+}
+
+/**
+ * Argumentos del script, sin el `--` separador.
+ *
+ * `pnpm run x -- --flag` reenvía el `--` tal cual, y `parseArgs` lo interpreta
+ * como "aquí terminan las opciones", así que `--flag` llegaría como posicional.
+ * Descartarlo hace que la forma documentada y la invocación directa con tsx se
+ * comporten igual.
+ */
+function argumentos(): string[] {
+  const args = process.argv.slice(2);
+  return args[0] === '--' ? args.slice(1) : args;
 }
 
 function fallar(mensaje: string): never {

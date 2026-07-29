@@ -5,9 +5,9 @@
 
 - **Última actualización:** 2026-07-29
 - **Fase actual:** piloto validable (§19.1 de la especificación)
-- **Estado:** cimientos + renderer público completos y verificados; **esquema aplicado
-  en Supabase, tenant del piloto creado y plantilla sembrada**. Falta el primer sitio,
-  el dashboard, la capa de IA y la bandeja de pedidos.
+- **Estado:** corte vertical en pie: **esquema aplicado, tenant creado, plantilla
+  sembrada y el primer sitio renderizando en preview**. Falta subir imágenes y
+  publicar; después el dashboard, la capa de IA y la bandeja de pedidos.
 
 **Verificación al cierre de esta fase:**
 
@@ -175,25 +175,18 @@ considera asignable a `Json`. Ambos corregidos.
 
 En orden. El orden importa: viene de §20 de la especificación.
 
-### 3.1 Crear el primer sitio del piloto — *siguiente paso inmediato*
+### 3.1 Imágenes del sitio y publicación — *siguiente paso inmediato*
 
-Ya hay tenant (R3) y plantilla sembrada en `development` (R4 pasos 1, 2 y 5 parcial).
-Falta el sitio, que es lo que cierra el corte vertical y permite ejecutar los pasos 3
-y 4 de R4, que son humanos.
+El sitio del piloto existe, con su borrador y su oferta, y **se ve en preview**. Lo que
+falta para publicarlo:
 
-En orden:
-
-1. `insert into sites` apuntando a la `template_version_id` sembrada, con
-   `site_content_drafts` inicializado desde `default_content`.
-2. `insert into offers` con el precio real. Sin oferta activa, `publishSite()`
-   rechaza la publicación, y con razón: el total sale de ahí.
-3. Subir las imágenes de los `asset_slots` obligatorios (`hero_mobile`, `hero_desktop`).
-   El `default_content` **no trae imágenes** a propósito, así que hasta ese punto el
-   sitio no es publicable — la validación en modo `publish` lo rechaza.
-4. Verlo en `/preview/<preview_token>` en móvil y escritorio.
-5. Recién entonces `pnpm db:seed-template -- --publish` y publicar el sitio.
-
-Conviene que 1 y 2 sean otro script en `scripts/`, por el mismo motivo que R4.
+1. Subir las imágenes de los `asset_slots` obligatorios (`hero_mobile` 4:5 y
+   `hero_desktop` 1:1). El `default_content` **no trae ninguna** a propósito, así que
+   la validación en modo `publish` rechaza el sitio hasta que existan. Requiere antes
+   definir el bucket de Storage y sus políticas por `tenant_id/site_id` (§25.11).
+2. Revisar preview en móvil y escritorio, peso y consola (R4 pasos 3 y 4).
+3. `pnpm db:seed-template -- --publish` y publicar el sitio con `publishSite()`.
+4. Conectar un dominio, que sigue bloqueado por §25.1.
 
 ### 3.2 Caché del renderer
 
@@ -269,6 +262,7 @@ pnpm install
 pnpm test                    # 68 pruebas
 pnpm typecheck               # paquetes, apps y scripts/
 pnpm db:seed-template        # siembra coffee-maker desde packages/templates (R4)
+pnpm db:seed-site -- --price=490000   # crea sitio, borrador y oferta
 ./scripts/validate-sql.sh    # Postgres efímero + migraciones + aislamiento
 
 tmux attach -t nitro_web     # sesión de trabajo persistente
@@ -278,7 +272,7 @@ tmux attach -t nitro_web     # sesión de trabajo persistente
 
 | Riesgo                                   | Estado                                                    |
 | ---------------------------------------- | --------------------------------------------------------- |
-| Base sin sitio ni oferta                 | R3 y R4 hechos; falta el primer `site` con sus imágenes   |
+| Sitio sin imágenes                       | Bloquea publicar; requiere definir Storage (§25.11)       |
 | `coffee-maker` 1.0.0 en `development`    | Deliberado: se publica tras verla en preview (R4 pasos 3-4) |
 | Dominio operativo sin definir            | `nitrolanding.co` es un placeholder — ver DECISIONES       |
 | Owner del piloto sin contraseña          | Usuario creado y confirmado; se define al existir el dashboard |

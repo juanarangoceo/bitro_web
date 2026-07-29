@@ -21,13 +21,11 @@ abuso podría arrastrar el correo y la marca del negocio.
 
 *Bloquea:* publicar cualquier landing.
 
-### 2. `SUPABASE_SECRET_KEY`
+### 2. ~~`SUPABASE_SECRET_KEY`~~ — resuelta
 
-Falta obtenerla del panel del proyecto `nitro_web` y ponerla **solo** en el dashboard
-y en el renderer (el renderer la necesita para resolver dominios de visitantes
-anónimos). Nunca con prefijo `NEXT_PUBLIC_`.
-
-*Bloquea:* que el renderer resuelva dominios y que se creen pedidos.
+Configurada. Va en el dashboard y en el renderer (este la necesita para resolver
+dominios de visitantes anónimos), nunca con prefijo `NEXT_PUBLIC_`. El reparto está
+en [`ENTORNO.md`](ENTORNO.md).
 
 ### 3. Disponibilidad del modelo de Gemini
 

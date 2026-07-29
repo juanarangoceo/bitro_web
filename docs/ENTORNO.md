@@ -19,7 +19,7 @@ que no necesita, no debe tenerlo.
 | -------------------------------------- | :------: | :-------: | ---------- |
 | `NEXT_PUBLIC_SUPABASE_URL`             |    ✅    |    ✅     | Pública    |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |    ✅    |    ✅     | Pública    |
-| `SUPABASE_SECRET_KEY`                  |    ❌    |    ✅     | **Secreta** |
+| `SUPABASE_SECRET_KEY`                  |    ✅    |    ✅     | **Secreta** |
 | `GEMINI_API_KEY`                       |    ❌    |    ✅     | **Secreta** |
 | `GEMINI_MODEL`                         |    ❌    |    ✅     | Servidor   |
 | `VERCEL_TOKEN`                         |    ❌    |    ✅     | **Secreta** |
@@ -34,6 +34,20 @@ que no necesita, no debe tenerlo.
 
 El renderer **no** puede gestionar dominios ni llamar a Gemini. Si alguna vez necesita
 `VERCEL_TOKEN`, algo se diseñó mal: esa operación pertenece al dashboard.
+
+**El renderer sí necesita `SUPABASE_SECRET_KEY`**, y no es una concesión: el visitante
+de una landing es `anon`, y `0008_grants.sql` le quita el acceso a *todas* las tablas.
+Sin la clave secreta el renderer no puede resolver `hostname → site_id` ni leer la
+publicación, así que no hay página que servir. Los usos están encapsulados en
+`packages/db` (`resolveSiteByHostname`, `resolveSiteByPreviewToken`) y en
+`POST /api/orders`; ningún componente la toca directamente.
+
+### Desarrollo local
+
+Next carga `.env.local` desde la raíz de **cada app**, no desde la del monorepo. Hay que
+crear `apps/renderer/.env.local` con solo las variables marcadas ✅ para el renderer.
+Copiar el archivo de la raíz entero funcionaría, pero le daría al renderer claves que
+no le corresponden.
 
 ## Claves de Supabase
 

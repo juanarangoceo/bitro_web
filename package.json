@@ -15,11 +15,13 @@
     "lint": "pnpm -r lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:seed-template": "tsx scripts/seed-template.ts"
+    "db:seed-template": "tsx scripts/seed-template.ts",
+    "db:seed-site": "tsx scripts/seed-site.ts"
   },
   "devDependencies": {
     "@nitro-web/contracts": "workspace:*",
     "@nitro-web/db": "workspace:*",
+    "@nitro-web/shared": "workspace:*",
     "@nitro-web/templates": "workspace:*",
     "@types/node": "^22.10.0",
     "tsx": "^4.23.1",
