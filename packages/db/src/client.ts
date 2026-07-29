@@ -49,6 +49,28 @@ export function createPublishableClient(): NitroWebClient {
 }
 
 /**
+ * Cliente que actúa **en nombre de un usuario**, con RLS aplicada.
+ *
+ * Es el que exigen las operaciones cuya autorización no debe saltarse: publicar
+ * un sitio, por ejemplo. Con el cliente secreto la operación siempre
+ * funcionaría, y eso es justo lo que no se quiere — que RLS verifique que el
+ * usuario pertenece al tenant y tiene rol de escritura ES la comprobación.
+ *
+ * La clave sigue siendo la publicable: lo que identifica al usuario es el JWT
+ * de su sesión, no una credencial con más poder.
+ */
+export function createUserClient(accessToken: string): NitroWebClient {
+  return createClient<Database>(
+    readEnv('NEXT_PUBLIC_SUPABASE_URL'),
+    readEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    },
+  );
+}
+
+/**
  * Cliente que omite RLS. **Solo servidor.**
  *
  * Lanza si se invoca en el navegador. La comprobación es barata y evita el peor

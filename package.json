@@ -17,7 +17,8 @@
     "test:watch": "vitest",
     "db:seed-template": "tsx scripts/seed-template.ts",
     "db:seed-site": "tsx scripts/seed-site.ts",
-    "db:seed-assets": "tsx scripts/seed-assets.ts"
+    "db:seed-assets": "tsx scripts/seed-assets.ts",
+    "db:publish-site": "tsx scripts/publish-site.ts"
   },
   "devDependencies": {
     "@nitro-web/contracts": "workspace:*",

@@ -209,18 +209,17 @@ anon listando el bucket          → []
 
 En orden. El orden importa: viene de §20 de la especificación.
 
-### 3.1 Publicar el sitio del piloto — *siguiente paso inmediato*
+### 3.1 Dar acceso al sitio publicado — *siguiente paso inmediato*
 
-El borrador **ya pasa la validación en modo `publish`**: las dos imágenes obligatorias
-están subidas y referenciadas. Falta lo humano y lo bloqueado:
+El sitio **está publicado**: plantilla `published`, publicación #1 con snapshot
+inmutable, precio congelado en 490000 y revisión R9 registrada. Pero `domains` está
+vacío, y el renderer resuelve por hostname: **una landing sin dominio existe y no se
+ve**. No es un fallo, es el diseño de §6.2.
 
-1. Revisar el preview en móvil y escritorio, peso y consola (R4 pasos 3 y 4).
-2. `pnpm db:seed-template -- --publish` para pasar la versión de plantilla a
-   `published`.
-3. Publicar el sitio con `publishSite()`, que exige un cliente con sesión de usuario
-   —no el secreto— porque la autorización de esa operación es justo lo que no hay que
-   saltarse. Sin dashboard, eso significa canjear un magic link para obtener el JWT.
-4. Conectar un dominio, todavía bloqueado por §25.1.
+Desbloquear esto es la decisión §25.1: registrar el dominio operativo y configurar su
+wildcard en el proyecto del renderer. Como puente, se puede registrar
+`nitro-web-renderer.vercel.app` en `domains` para verla ya; queda tras el SSO del
+equipo, así que sirve de revisión interna y no de publicación real.
 
 ### 3.1.1 Lo que quedó resuelto de imágenes
 

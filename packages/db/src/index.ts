@@ -1,6 +1,7 @@
 export {
   createPublishableClient,
   createSecretClient,
+  createUserClient,
   type NitroWebClient,
 } from './client';
 
