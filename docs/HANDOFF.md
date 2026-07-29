@@ -5,15 +5,19 @@
 
 - **Última actualización:** 2026-07-29
 - **Fase actual:** piloto validable (§19.1 de la especificación)
-- **Estado:** cimientos + renderer público completos y verificados. Falta el dashboard,
-  la capa de IA y la bandeja de pedidos.
+- **Estado:** cimientos + renderer público completos y verificados, y **el esquema ya
+  está aplicado en Supabase**. Falta el dashboard, la capa de IA y la bandeja de
+  pedidos.
 
 **Verificación al cierre de esta fase:**
 
 ```
 pnpm test                    → 68 pruebas en verde
-next build (renderer)        → compila; TypeScript sin errores
+pnpm typecheck               → sin errores
+next build (renderer)        → compila
 ./scripts/validate-sql.sh    → 24 tablas con RLS; AISLAMIENTO MULTI-TENANT: OK
+Supabase (zdhdhlqnwubckdnqonxp) → 24 tablas, 24 con RLS, 37 políticas, 0 grants a anon
+get_advisors(security)       → sin bloqueantes (ver §2, "Esquema en Supabase")
 ```
 
 ---
@@ -134,6 +138,29 @@ snapshot y recién entonces mueve el puntero. `rollbackSite()` solo mueve el pun
 verificando que la publicación pertenezca a ese sitio. `hasPendingChanges()` deriva
 `changes_pending` de timestamps, sin columna que mantener sincronizada.
 
+### Esquema en Supabase — aplicado
+
+Las nueve migraciones están aplicadas en `zdhdhlqnwubckdnqonxp` (R2 ejecutado). El
+remoto coincide con lo que valida `validate-sql.sh`: 24 tablas, 24 con RLS, 37
+políticas, cuatro planes sembrados y **cero grants para `anon`**.
+
+`0009_search_path.sql` se añadió a raíz de los advisors: `app.touch_updated_at` y
+`app.enforce_template_version_immutability` no tenían `search_path` fijado. Es el mismo
+argumento de ADR 0002 aplicado a las funciones de trigger.
+
+Los seis avisos que quedan son **por diseño** y no se van a "arreglar":
+
+| Aviso                                              | Por qué se acepta                                             |
+| -------------------------------------------------- | ------------------------------------------------------------- |
+| `admin_notes` y `order_counters` con RLS sin políticas | Es el mecanismo: sin políticas, nadie salvo `service_role` lee |
+| `create_public_order` y `record_page_view` ejecutables por `anon` | Son exactamente las dos funciones que §14.2 expone al visitante |
+
+Los tipos están en `packages/db/src/types.generated.ts` y los clientes ya son
+`SupabaseClient<Database>`. Tiparlos destapó dos defectos reales en
+`POST /api/orders`: se pasaba `null` donde la función espera que se omita el argumento
+para que aplique su `DEFAULT`, y `Attribution` era una `interface`, que TypeScript no
+considera asignable a `Json`. Ambos corregidos.
+
 ### Infraestructura
 
 - Proyecto Supabase **`nitro_web`** creado: ref `zdhdhlqnwubckdnqonxp`, `us-east-1`.
@@ -147,18 +174,15 @@ verificando que la publicación pertenezca a ese sitio. `hasPendingChanges()` de
 
 En orden. El orden importa: viene de §20 de la especificación.
 
-### 3.1 Aplicar el esquema en Supabase — *siguiente paso inmediato*
+### 3.1 Crear el tenant inicial — *siguiente paso inmediato*
 
-El SQL está escrito y verificado localmente, pero **todavía no está aplicado** en
-el proyecto remoto. Procedimiento en [`RUNBOOKS.md`](RUNBOOKS.md) → R2.
+El esquema ya está en Supabase, pero la base está vacía de datos de negocio: no hay
+tenant, ni usuario, ni plantilla registrada. Sin eso no se puede publicar nada ni
+probar el renderer contra datos reales.
 
-```bash
-./scripts/validate-sql.sh     # debe pasar primero
-# luego aplicar packages/db/migrations/*.sql en orden numérico
-```
-
-Después: correr los advisors de seguridad de Supabase y generar los tipos
-TypeScript en `packages/db/src/types.generated.ts`.
+Procedimiento en [`RUNBOOKS.md`](RUNBOOKS.md) → R3. Requiere `SUPABASE_SECRET_KEY`,
+que sigue sin configurarse (ver §7). Después de R3 hay que sembrar la versión de
+plantilla `coffee-maker` 1.0.0 desde `packages/templates` con R4.
 
 ### 3.2 Caché del renderer
 
@@ -242,8 +266,8 @@ tmux attach -t nitro_web     # sesión de trabajo persistente
 
 | Riesgo                                   | Estado                                                    |
 | ---------------------------------------- | --------------------------------------------------------- |
-| Esquema no aplicado en Supabase          | Verificado en local; falta ejecutar R2                    |
+| Base sin tenant ni plantilla sembrada    | Esquema aplicado; faltan R3 y R4                          |
 | Dominio operativo sin definir            | `nitrolanding.co` es un placeholder — ver DECISIONES       |
-| `SUPABASE_SECRET_KEY` no configurada     | Obtener del panel y ponerla solo en el dashboard           |
+| `SUPABASE_SECRET_KEY` no configurada     | Obtener del panel y ponerla solo en el dashboard. **Bloquea R3.** |
 | Modelo de Gemini                         | La spec nombra `gemini-3.6-flash`; verificar disponibilidad |
 | Proveedor de correo y de pagos sin elegir | Bloquea la v1, no el piloto                               |

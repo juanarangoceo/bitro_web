@@ -44,7 +44,18 @@ Solo después de que R1 pase en verde.
 2. Verificar que no queden avisos de seguridad:
    `get_advisors(project_id, type="security")`. Cualquier tabla sin RLS o vista
    sin `security_invoker` es un bloqueante, no una advertencia.
-3. Regenerar tipos TypeScript y guardarlos en `packages/db/src/types.generated.ts`.
+
+   Seis avisos son esperados y están justificados en
+   [`HANDOFF.md`](HANDOFF.md) → "Esquema en Supabase". Si aparece uno distinto,
+   es un hallazgo real.
+3. Regenerar tipos TypeScript en `packages/db/src/types.generated.ts`
+   (`generate_typescript_types` del MCP de Supabase, o
+   `supabase gen types typescript --project-id zdhdhlqnwubckdnqonxp`). El archivo
+   es **generado**: no editarlo a mano, porque la siguiente regeneración lo pisa.
+4. `pnpm typecheck`. Los tipos generados son la red que detecta que el código y
+   el esquema se separaron; si compilaba antes y ahora no, el error es real.
+
+Estado actual: aplicado hasta `0009_search_path.sql`.
 
 ## R3 — Crear el tenant inicial (§2.1)
 

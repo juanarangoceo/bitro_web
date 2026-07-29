@@ -30,13 +30,20 @@ export type ClickIdKey = (typeof CLICK_ID_KEYS)[number];
 /** Longitud máxima aceptada por valor. Corta payloads abusivos sin perder datos reales. */
 const MAX_VALUE_LENGTH = 255;
 
-/** Atribución normalizada lista para persistir junto al pedido. */
-export interface Attribution {
+/**
+ * Atribución normalizada lista para persistir junto al pedido.
+ *
+ * Es un alias de tipo y no una `interface` a propósito: TypeScript solo infiere
+ * índice implícito para alias, y sin él este objeto no es asignable al tipo
+ * `Json` de Supabase, aunque su contenido sea JSON válido. Declararlo como
+ * `interface` obligaría a un cast en cada punto donde se persiste.
+ */
+export type Attribution = {
   utm: Partial<Record<UtmKey, string>>;
   clickIds: Partial<Record<ClickIdKey, string>>;
   referrer: string | null;
   landingUrl: string | null;
-}
+};
 
 /**
  * Extrae la atribución desde los parámetros de consulta de la landing.

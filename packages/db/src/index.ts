@@ -1,4 +1,10 @@
-export { createPublishableClient, createSecretClient } from './client';
+export {
+  createPublishableClient,
+  createSecretClient,
+  type NitroWebClient,
+} from './client';
+
+export type { Database, Json, Tables, TablesInsert, TablesUpdate } from './types.generated';
 
 export {
   resolveSiteByHostname,

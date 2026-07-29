@@ -15,6 +15,15 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import type { Database } from './types.generated';
+
+/**
+ * Cliente tipado contra el esquema real. `types.generated.ts` se regenera desde
+ * Supabase al aplicar migraciones (RUNBOOKS R2), así que una columna renombrada
+ * rompe la compilación en vez de devolver `undefined` en producción.
+ */
+export type NitroWebClient = SupabaseClient<Database>;
+
 function readEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -31,8 +40,8 @@ function readEnv(name: string): string {
  * Sin sesión de usuario actúa como `anon`, que no tiene acceso a ninguna tabla
  * (ver `0008_grants.sql`): solo puede invocar las funciones públicas.
  */
-export function createPublishableClient(): SupabaseClient {
-  return createClient(
+export function createPublishableClient(): NitroWebClient {
+  return createClient<Database>(
     readEnv('NEXT_PUBLIC_SUPABASE_URL'),
     readEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
     { auth: { persistSession: false } },
@@ -46,14 +55,16 @@ export function createPublishableClient(): SupabaseClient {
  * error posible del sistema: un import mal puesto que arrastre la clave secreta
  * al bundle del cliente.
  */
-export function createSecretClient(): SupabaseClient {
+export function createSecretClient(): NitroWebClient {
   if (typeof window !== 'undefined') {
     throw new Error(
       'createSecretClient() se invocó en el navegador. La clave secreta jamás debe salir del servidor.',
     );
   }
 
-  return createClient(readEnv('NEXT_PUBLIC_SUPABASE_URL'), readEnv('SUPABASE_SECRET_KEY'), {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  return createClient<Database>(
+    readEnv('NEXT_PUBLIC_SUPABASE_URL'),
+    readEnv('SUPABASE_SECRET_KEY'),
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
 }

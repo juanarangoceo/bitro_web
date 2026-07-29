@@ -124,11 +124,13 @@ export async function POST(request: Request) {
     p_city: input.city,
     p_address: input.address,
     p_quantity: input.quantity,
-    p_customer_email: normalizeEmail(input.customer_email ?? null),
-    p_delivery_notes: input.delivery_notes ?? null,
+    // `undefined` y no `null`: omitir el argumento deja que aplique el DEFAULT
+    // de la función, que es exactamente el valor que se quiere.
+    p_customer_email: normalizeEmail(input.customer_email ?? null) ?? undefined,
+    p_delivery_notes: input.delivery_notes ?? undefined,
     p_payment_method: 'cod',
     p_attribution: attribution,
-    p_idempotency_key: input.idempotency_key ?? null,
+    p_idempotency_key: input.idempotency_key ?? undefined,
   });
 
   if (error) {
