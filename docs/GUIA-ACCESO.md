@@ -17,7 +17,7 @@ La contraseña no se puede consultar: Supabase guarda solamente su hash. Tampoco
 
 ## Entrar sin conocer la contraseña
 
-1. Abre la URL del dashboard indicada en la sección «Infraestructura» de `RUNBOOKS.md`.
+1. Abre https://nitro-web-dashboard.vercel.app/login.
 2. Escribe `juanarangopm@gmail.com`.
 3. Pulsa **Recibe un enlace de acceso**.
 4. Abre el correo y sigue el enlace. El enlace es temporal y de un solo uso.
