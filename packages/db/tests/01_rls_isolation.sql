@@ -54,6 +54,13 @@ insert into public.contacts (tenant_id, site_id, full_name, normalized_email) va
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'e2222222-2222-2222-2222-222222222222',
    'Comprador B', 'compradorb@ejemplo.com');
 
+-- Archivo del tenant B, insertado como superusuario (que omite RLS) para que
+-- exista un objetivo real. Sin él, la prueba de borrado cruzado pasaría sola
+-- por no encontrar filas, que es exactamente el falso verde a evitar.
+insert into storage.objects (bucket_id, name) values
+  ('site-assets',
+   'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/e2222222-2222-2222-2222-222222222222/hero-b.webp');
+
 
 -- --- Helper de aserción ----------------------------------------------------
 create or replace function pg_temp.assert_eq(actual bigint, expected bigint, etiqueta text)
@@ -183,6 +190,78 @@ begin
     raise exception 'FALLA: se insertó un pedido saltándose create_public_order()';
   end if;
   raise notice '  ok  Nadie inserta pedidos directamente (el total lo calcula el servidor)';
+end $$;
+
+
+-- --- Storage: la carpeta del tenant es una frontera ------------------------
+--
+-- La ruta es `<tenant_id>/<site_id>/<archivo>`, así que el control depende por
+-- completo de leer bien el primer segmento. Estas pruebas cubren el caso obvio
+-- (escribir en la carpeta ajena) y el que se olvida: mover un archivo propio a
+-- la carpeta ajena con un UPDATE.
+do $$
+declare
+  ok boolean;
+begin
+  raise notice 'Usuario A — storage';
+
+  -- Listar el bucket no debe revelar el inventario ajeno: las rutas llevan
+  -- tenant_id y site_id, así que enumerarlas expondría cuántos clientes hay y
+  -- cuántos sitios tiene cada uno.
+  if exists (select 1 from storage.objects where name like 'bbbbbbbb%') then
+    raise exception 'FALLA: A puede listar los archivos del tenant B';
+  end if;
+  raise notice '  ok  A NO puede listar los archivos del tenant B';
+
+  insert into storage.objects (bucket_id, name)
+  values ('site-assets',
+          'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/e1111111-1111-1111-1111-111111111111/hero.webp');
+  raise notice '  ok  A puede subir a su propia carpeta';
+
+  ok := false;
+  begin
+    insert into storage.objects (bucket_id, name)
+    values ('site-assets',
+            'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/e2222222-2222-2222-2222-222222222222/intruso.webp');
+  exception when insufficient_privilege or check_violation then
+    ok := true;
+  end;
+  if not ok then
+    raise exception 'FALLA: A subió un archivo a la carpeta del tenant B';
+  end if;
+  raise notice '  ok  A NO puede subir a la carpeta del tenant B';
+
+  -- Una ruta que no empieza por UUID no debe colarse por un error de casteo.
+  ok := false;
+  begin
+    insert into storage.objects (bucket_id, name) values ('site-assets', 'suelto.webp');
+  exception when insufficient_privilege or check_violation then
+    ok := true;
+  end;
+  if not ok then
+    raise exception 'FALLA: se aceptó un archivo fuera de toda carpeta de tenant';
+  end if;
+  raise notice '  ok  Una ruta sin tenant_id se rechaza';
+
+  -- Mover un archivo propio a la carpeta ajena: lo frena el WITH CHECK.
+  ok := false;
+  begin
+    update storage.objects
+      set name = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/e2222222-2222-2222-2222-222222222222/robado.webp'
+      where name like 'aaaaaaaa%';
+  exception when insufficient_privilege or check_violation then
+    ok := true;
+  end;
+  if not ok then
+    raise exception 'FALLA: A movió un archivo suyo a la carpeta del tenant B';
+  end if;
+  raise notice '  ok  A NO puede mover un archivo suyo a la carpeta de B';
+
+  delete from storage.objects where name like 'bbbbbbbb%';
+  if found then
+    raise exception 'FALLA: A borró un archivo del tenant B';
+  end if;
+  raise notice '  ok  A NO puede borrar archivos del tenant B';
 end $$;
 
 

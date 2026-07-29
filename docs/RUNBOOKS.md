@@ -17,6 +17,7 @@ reconstruir contexto.
 | Equipo Vercel      | `seller360grados-projects` (`team_CmYLrlLBZUveo9wuFhaJ2rOy`) |
 | Repositorio        | `github.com/juanarangoceo/bitro_web` (público), rama `master` |
 | Proyecto Vercel    | `nitro-web-renderer` (`prj_G35tI9H8Ei0Ph6Jezcdzy7j2XZmp`), raíz `apps/renderer` |
+| Bucket de imágenes | `site-assets` — público en lectura, 5 MB, rutas `<tenant_id>/<site_id>/<archivo>` |
 | Repo de referencia | `github.com/juanarangoceo/cafetera_espresso` (público)       |
 
 > El proyecto Supabase de **Nitro Bot** (`snbxdzytpwibctepuiwq`) es intocable.

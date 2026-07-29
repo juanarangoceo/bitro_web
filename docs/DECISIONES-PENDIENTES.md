@@ -87,12 +87,21 @@ necesita almacenamiento externo (Upstash Redis del Marketplace, o Vercel Edge Co
 Se eligió Tailwind 3 para poder portar el sistema de diseño de la landing de referencia
 sin reescribirlo (ADR 0006). Revisar después del gate del piloto.
 
-### 11. Almacenamiento y optimización de imágenes
+### 11. Optimización de imágenes — *bucket resuelto, pipeline pendiente*
 
-Falta definir el bucket de Supabase Storage, sus políticas por `tenant_id/site_id`, el
-pipeline de conversión a WebP/AVIF y las variantes responsivas (§9). El peso de las
-imágenes es parte del modelo financiero, no solo del rendimiento: una landing de 10 MB
-consume cinco veces más transferencia que una de 2 MB.
+**Resuelto:** bucket `site-assets` y sus políticas por `tenant_id/site_id`
+(`0010_storage.sql`, `0011_storage_listing.sql`). Público en lectura, con escritura
+restringida al tenant dueño de la carpeta, techo de 5 MB por archivo y lista blanca de
+MIME sin SVG.
+
+**Pendiente:** el pipeline de conversión a WebP/AVIF y las variantes responsivas (§9).
+Hoy se sube el archivo tal cual llega. Next optimiza al servir —`formats` está
+configurado en `next.config.ts`— pero eso no reduce lo que se almacena ni lo que se
+transfiere en la primera carga de cada variante.
+
+El peso de las imágenes es parte del modelo financiero, no solo del rendimiento: una
+landing de 10 MB consume cinco veces más transferencia que una de 2 MB. El límite de
+5 MB por archivo acota el daño, no lo resuelve.
 
 ### 12. Estrategia de caché del renderer
 

@@ -162,6 +162,37 @@ Los tipos están en `packages/db/src/types.generated.ts` y los clientes ya son
 para que aplique su `DEFAULT`, y `Attribution` era una `interface`, que TypeScript no
 considera asignable a `Json`. Ambos corregidos.
 
+### Storage — bucket `site-assets`
+
+Rutas `<tenant_id>/<site_id>/<archivo>`. La primera carpeta **es** la frontera de
+seguridad: `app.tenant_from_storage_path()` la lee y las políticas la comprueban con
+`app.has_tenant_role()`, igual que el resto del esquema.
+
+Público en lectura, y no es un descuido: una imagen de una landing publicada se le
+sirve a visitantes anónimos, así que es pública por definición. Firmarla rompería el
+caché del CDN y el optimizador de Next sin esconder nada. Lo que se controla es quién
+escribe.
+
+Techo de 5 MB por archivo y lista blanca de MIME. **SVG queda fuera**: puede contener
+`<script>` y se serviría desde el mismo origen que las landings.
+
+`0011` quitó la política de lectura abierta que creó `0010`. La detectó el advisor
+`public_bucket_allows_listing`: en un bucket público esa política no habilita ver una
+imagen —la URL pública no pasa por RLS— sino **listar** el bucket, y como las rutas
+llevan `tenant_id`, eso exponía cuántos clientes hay y cuántos sitios tiene cada uno.
+Listar quedó acotado a los tenants del usuario.
+
+Verificado contra el proyecto real con una sesión del owner:
+
+```
+subir a la carpeta propia        → 200
+subir a la carpeta de otro tenant→ 400
+subir sin carpeta de tenant      → 400
+subir un SVG                     → 400
+leer por URL pública, sin credenciales → 200 image/png
+anon listando el bucket          → []
+```
+
 ### Infraestructura
 
 - Proyecto Supabase **`nitro_web`** creado: ref `zdhdhlqnwubckdnqonxp`, `us-east-1`.
@@ -181,9 +212,10 @@ El sitio del piloto existe, con su borrador y su oferta, y **se ve en preview**.
 falta para publicarlo:
 
 1. Subir las imágenes de los `asset_slots` obligatorios (`hero_mobile` 4:5 y
-   `hero_desktop` 1:1). El `default_content` **no trae ninguna** a propósito, así que
-   la validación en modo `publish` rechaza el sitio hasta que existan. Requiere antes
-   definir el bucket de Storage y sus políticas por `tenant_id/site_id` (§25.11).
+   `hero_desktop` 1:1) al bucket `site-assets`, y registrarlas en `assets` para que el
+   contenido pueda referenciarlas por `assets.id`. El `default_content` **no trae
+   ninguna** a propósito, así que la validación en modo `publish` rechaza el sitio
+   hasta que existan.
 2. Revisar preview en móvil y escritorio, peso y consola (R4 pasos 3 y 4).
 3. `pnpm db:seed-template -- --publish` y publicar el sitio con `publishSite()`.
 4. Conectar un dominio, que sigue bloqueado por §25.1.
