@@ -1,0 +1,8 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+# esbuild compila su binario nativo en postinstall; Vitest lo necesita.
+allowBuilds:
+  esbuild: true
+  # sharp optimiza las imágenes de las landings; Next lo usa en build y runtime.
+  sharp: true

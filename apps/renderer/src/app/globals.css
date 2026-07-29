@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* El contenido de las landings lo escriben clientes y modelos: puede venir
+     con palabras largas sin espacios que desbordarían el contenedor en móvil. */
+  body {
+    overflow-wrap: break-word;
+  }
+}
+
+@layer utilities {
+  /* Respeta a quien pidió menos movimiento en su sistema (§18, accesibilidad). */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
