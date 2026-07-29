@@ -5,9 +5,10 @@
 
 - **Última actualización:** 2026-07-29
 - **Fase actual:** piloto validable (§19.1 de la especificación)
-- **Estado:** corte vertical en pie: **esquema aplicado, tenant creado, plantilla
-  sembrada y el primer sitio renderizando en preview**. Falta subir imágenes y
-  publicar; después el dashboard, la capa de IA y la bandeja de pedidos.
+- **Estado:** corte vertical completo hasta la puerta de publicar: **esquema aplicado,
+  tenant creado, plantilla sembrada, sitio con imágenes renderizando en preview y
+  borrador que pasa la validación en modo `publish`**. Falta publicar; después el
+  dashboard, la capa de IA y la bandeja de pedidos.
 
 **Verificación al cierre de esta fase:**
 
@@ -19,6 +20,8 @@ next build (renderer)        → compila
 Supabase (zdhdhlqnwubckdnqonxp) → 24 tablas, 24 con RLS, 37 políticas, 0 grants a anon
 get_advisors(security)       → sin bloqueantes (ver §2, "Esquema en Supabase")
 REST con la clave publicable → 42501 en toda tabla; solo responden las dos funciones
+Storage con sesión del owner → escritura propia 200, ajena 400, SVG 400, lectura pública 200
+Borrador del sitio piloto    → pasa compileContentValidator(schema, 'publish')
 ```
 
 ---
@@ -141,7 +144,7 @@ verificando que la publicación pertenezca a ese sitio. `hasPendingChanges()` de
 
 ### Esquema en Supabase — aplicado
 
-Las nueve migraciones están aplicadas en `zdhdhlqnwubckdnqonxp` (R2 ejecutado). El
+Las once migraciones están aplicadas en `zdhdhlqnwubckdnqonxp` (R2 ejecutado). El
 remoto coincide con lo que valida `validate-sql.sh`: 24 tablas, 24 con RLS, 37
 políticas, cuatro planes sembrados y **cero grants para `anon`**.
 
@@ -206,19 +209,28 @@ anon listando el bucket          → []
 
 En orden. El orden importa: viene de §20 de la especificación.
 
-### 3.1 Imágenes del sitio y publicación — *siguiente paso inmediato*
+### 3.1 Publicar el sitio del piloto — *siguiente paso inmediato*
 
-El sitio del piloto existe, con su borrador y su oferta, y **se ve en preview**. Lo que
-falta para publicarlo:
+El borrador **ya pasa la validación en modo `publish`**: las dos imágenes obligatorias
+están subidas y referenciadas. Falta lo humano y lo bloqueado:
 
-1. Subir las imágenes de los `asset_slots` obligatorios (`hero_mobile` 4:5 y
-   `hero_desktop` 1:1) al bucket `site-assets`, y registrarlas en `assets` para que el
-   contenido pueda referenciarlas por `assets.id`. El `default_content` **no trae
-   ninguna** a propósito, así que la validación en modo `publish` rechaza el sitio
-   hasta que existan.
-2. Revisar preview en móvil y escritorio, peso y consola (R4 pasos 3 y 4).
-3. `pnpm db:seed-template -- --publish` y publicar el sitio con `publishSite()`.
-4. Conectar un dominio, que sigue bloqueado por §25.1.
+1. Revisar el preview en móvil y escritorio, peso y consola (R4 pasos 3 y 4).
+2. `pnpm db:seed-template -- --publish` para pasar la versión de plantilla a
+   `published`.
+3. Publicar el sitio con `publishSite()`, que exige un cliente con sesión de usuario
+   —no el secreto— porque la autorización de esa operación es justo lo que no hay que
+   saltarse. Sin dashboard, eso significa canjear un magic link para obtener el JWT.
+4. Conectar un dominio, todavía bloqueado por §25.1.
+
+### 3.1.1 Lo que quedó resuelto de imágenes
+
+`pnpm db:seed-assets` sube el archivo, registra la fila en `assets` y escribe el
+`assets.id` en el campo del borrador que corresponde al slot. Las tres cosas van
+juntas o no sirve ninguna: sin la tercera el archivo existe pero la landing no lo
+muestra, y sin la segunda el contenido apunta a un id que no resuelve.
+
+Las imágenes del piloto salen del repo de referencia, que vende el mismo producto:
+`hero_mobile` 800×1000 y `hero_desktop` 1200×1200, dentro de los mínimos del manifest.
 
 ### 3.2 Caché del renderer
 

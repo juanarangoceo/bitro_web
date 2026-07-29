@@ -16,7 +16,7 @@ import { OrderForm } from './OrderForm';
  * cobra el servidor no pueden divergir.
  */
 export function CoffeeMakerV1({ site, isPreview }: TemplateProps) {
-  const { content, offer } = site;
+  const { content, offer, assets } = site;
 
   const priceAmount = typeof offer.price_amount === 'number' ? offer.price_amount : undefined;
   const compareAtAmount =
@@ -25,12 +25,12 @@ export function CoffeeMakerV1({ site, isPreview }: TemplateProps) {
 
   return (
     <main className="min-h-screen bg-coffee-50 pb-24 text-coffee-900 md:pb-0">
-      <Hero content={content} />
+      <Hero content={content} assets={assets} />
       <Problem content={content} />
-      <Gallery content={content} />
-      <Bundle content={content} />
+      <Gallery content={content} assets={assets} />
+      <Bundle content={content} assets={assets} />
       <Savings content={content} />
-      <SocialProof content={content} />
+      <SocialProof content={content} assets={assets} />
       <Offer
         content={content}
         siteId={site.siteId}
@@ -47,13 +47,16 @@ export function CoffeeMakerV1({ site, isPreview }: TemplateProps) {
 
 type ContentProps = { content: Record<string, unknown> };
 
+/** Índice `assets.id` → ruta en Storage. Lo necesita todo bloque con imágenes. */
+type AssetProps = { assets: Record<string, string> };
+
 // ---------------------------------------------------------------------------
 
-function Hero({ content }: ContentProps) {
+function Hero({ content, assets }: ContentProps & AssetProps) {
   const hero = section(content, 'hero');
   const headline = text(hero, 'headline');
-  const mobile = assetUrl(hero.image_mobile);
-  const desktop = assetUrl(hero.image_desktop);
+  const mobile = assetUrl(hero.image_mobile, assets);
+  const desktop = assetUrl(hero.image_desktop, assets);
 
   if (!headline) return null;
 
@@ -215,7 +218,7 @@ function Problem({ content }: ContentProps) {
 
 // ---------------------------------------------------------------------------
 
-function Gallery({ content }: ContentProps) {
+function Gallery({ content, assets }: ContentProps & AssetProps) {
   const gallery = section(content, 'gallery');
   const items = list(gallery, 'items');
   if (items.length === 0) return null;
@@ -236,7 +239,7 @@ function Gallery({ content }: ContentProps) {
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {items.map((item, i) => {
-            const src = assetUrl(item.image);
+            const src = assetUrl(item.image, assets);
             return (
               <article
                 key={i}
@@ -268,7 +271,7 @@ function Gallery({ content }: ContentProps) {
 
 // ---------------------------------------------------------------------------
 
-function Bundle({ content }: ContentProps) {
+function Bundle({ content, assets }: ContentProps & AssetProps) {
   const bundle = section(content, 'bundle');
   const items = list(bundle, 'items');
   if (items.length === 0) return null;
@@ -304,7 +307,7 @@ function Bundle({ content }: ContentProps) {
 
         <div className="grid items-stretch gap-8 md:grid-cols-2 md:gap-16">
           {items.map((item, i) => {
-            const src = assetUrl(item.image);
+            const src = assetUrl(item.image, assets);
             const value = num(item, 'value_amount');
             return (
               <article
@@ -451,7 +454,7 @@ function Savings({ content }: ContentProps) {
 
 // ---------------------------------------------------------------------------
 
-function SocialProof({ content }: ContentProps) {
+function SocialProof({ content, assets }: ContentProps & AssetProps) {
   const proof = section(content, 'social_proof');
   const testimonials = list(proof, 'testimonials');
   // Sin testimonios reales no se dibuja la sección. Un bloque de prueba social
@@ -466,7 +469,7 @@ function SocialProof({ content }: ContentProps) {
         </h2>
         <div className="grid gap-6 md:grid-cols-3">
           {testimonials.map((item, i) => {
-            const avatar = assetUrl(item.image);
+            const avatar = assetUrl(item.image, assets);
             return (
               <figure
                 key={i}

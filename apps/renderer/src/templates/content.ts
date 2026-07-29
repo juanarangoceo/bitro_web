@@ -48,13 +48,27 @@ export function list(source: Section, key: string): Section[] {
  * URL pública de un asset a partir de su id.
  *
  * El contenido guarda `assets.id`, no una URL (ADR 0003): así, rotar el bucket o
- * cambiar de CDN no obliga a reescribir el contenido de todas las landings.
+ * cambiar de CDN no obliga a reescribir el contenido de todas las landings. Ese
+ * id **no** es la ruta en Storage —que tiene la forma
+ * `<tenant_id>/<site_id>/<archivo>`—, así que hay que traducirlo con el índice
+ * que trae `ResolvedSite.assets`.
+ *
+ * Un id que no está en el índice devuelve `undefined`, y quien llama oculta esa
+ * parte de la página: mejor una sección sin imagen que un `<img>` roto.
  */
-export function assetUrl(assetId: unknown): string | undefined {
+export function assetUrl(
+  assetId: unknown,
+  assets: Record<string, string>,
+): string | undefined {
   if (typeof assetId !== 'string' || assetId === '') return undefined;
+
+  const storagePath = assets[assetId];
+  if (!storagePath) return undefined;
+
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!base) return undefined;
-  return `${base}/storage/v1/object/public/site-assets/${assetId}`;
+
+  return `${base}/storage/v1/object/public/site-assets/${storagePath}`;
 }
 
 function isPlainObject(value: unknown): value is Section {

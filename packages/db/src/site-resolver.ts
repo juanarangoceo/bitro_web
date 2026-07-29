@@ -26,6 +26,14 @@ export interface ResolvedSite {
   templateVersion: string;
   /** Snapshot publicado. Inmutable. */
   content: Record<string, unknown>;
+  /**
+   * `assets.id` → `assets.storage_path`, para los assets de este sitio.
+   *
+   * El contenido referencia assets por id y no por URL (ADR 0003), así que
+   * alguien tiene que traducir. Se resuelve aquí, en la misma consulta que trae
+   * el sitio, y no en el componente: un componente no debería consultar la base.
+   */
+  assets: Record<string, string>;
   /** Oferta congelada al publicar: precio, moneda, envío. */
   offer: Record<string, unknown>;
   publicationId: string;
@@ -105,6 +113,7 @@ async function loadPublishedSite(
       name,
       status,
       published_publication_id,
+      assets ( id, storage_path ),
       site_publications!sites_published_publication_fk (
         id,
         content_json,
@@ -147,6 +156,7 @@ async function loadPublishedSite(
       templateKey: template?.template_key ?? 'desconocida',
       templateVersion: templateVersion.version,
       content: (publication.content_json ?? {}) as Record<string, unknown>,
+      assets: indexAssets(data.assets),
       offer: (publication.offer_snapshot ?? {}) as Record<string, unknown>,
       publicationId: publication.id,
       publishedAt: publication.published_at,
@@ -172,6 +182,7 @@ export async function resolveSiteByPreviewToken(
       `
       id, tenant_id, name,
       template_versions:template_version_id ( version, component_key, templates ( template_key ) ),
+      assets ( id, storage_path ),
       site_content_drafts ( content_json ),
       offers ( title, price_amount, compare_at_amount, shipping_amount, currency, inventory )
     `,
@@ -198,6 +209,7 @@ export async function resolveSiteByPreviewToken(
       templateKey: template?.template_key ?? 'desconocida',
       templateVersion: templateVersion.version,
       content: (draft?.content_json ?? {}) as Record<string, unknown>,
+      assets: indexAssets(data.assets),
       offer: (offer ?? {}) as Record<string, unknown>,
       publicationId: 'preview',
       publishedAt: new Date().toISOString(),
@@ -210,6 +222,23 @@ export async function resolveSiteByPreviewToken(
 function firstOf<T>(value: T | T[] | null | undefined): T | undefined {
   if (!value) return undefined;
   return Array.isArray(value) ? value[0] : value;
+}
+
+/**
+ * Índice `assets.id` → `storage_path`.
+ *
+ * Un asset sin ruta se omite en lugar de entrar con `undefined`: el renderer
+ * trata un id que no resuelve como "sin imagen" y oculta esa parte, que es
+ * preferible a un `<img>` roto en una landing con tráfico pagado.
+ */
+function indexAssets(
+  rows: { id: string; storage_path: string | null }[] | null | undefined,
+): Record<string, string> {
+  const indice: Record<string, string> = {};
+  for (const row of rows ?? []) {
+    if (row.storage_path) indice[row.id] = row.storage_path;
+  }
+  return indice;
 }
 
 /**
