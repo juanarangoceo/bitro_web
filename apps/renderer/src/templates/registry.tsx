@@ -22,6 +22,7 @@ export interface TemplateProps {
 
 const COMPONENTS: Record<string, (props: TemplateProps) => ReactElement> = {
   coffeeMakerV1: CoffeeMakerV1,
+  coffeeMakerV11: CoffeeMakerV1,
 };
 
 /**

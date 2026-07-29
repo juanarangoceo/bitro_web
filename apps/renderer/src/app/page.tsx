@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { recordPageView, createSecretClient } from '@nitro-web/db';
 import { resolveCurrentSite } from '@/lib/resolve-request';
@@ -35,7 +36,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function LandingPage() {
+export default function LandingPage() {
+  return (
+    <Suspense fallback={<LandingLoading />}>
+      <LandingContent />
+    </Suspense>
+  );
+}
+
+async function LandingContent() {
   const resolution = await resolveCurrentSite();
 
   switch (resolution.kind) {
@@ -61,4 +70,12 @@ export default async function LandingPage() {
       return renderTemplate(site);
     }
   }
+}
+
+function LandingLoading() {
+  return (
+    <main className="grid min-h-screen place-items-center bg-stone-50 text-stone-600">
+      <p>Cargando sitio…</p>
+    </main>
+  );
 }

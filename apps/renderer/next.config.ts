@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
+  cacheComponents: true,
   // Los paquetes del monorepo se consumen como TypeScript sin build previo
   // (ADR 0001): editar un paquete se refleja en la app sin pasos intermedios.
   transpilePackages: [
