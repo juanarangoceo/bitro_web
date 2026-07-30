@@ -24,6 +24,8 @@
   con `token_hash` + `type`.
 - El operador puede crear o restablecer su contraseña desde el login y
   cambiarla desde `/contrasena`; la actualización usa su sesión de Supabase.
+- La recuperación usa el callback dedicado `/auth/recovery`, sin parámetros en
+  `redirectTo`, para que la allow-list de Supabase no caiga al Site URL.
 - Publicación y rollback en modo soporte, revisión humana, dominios vía API de
   Vercel, pedidos, métricas, consumo de IA, notas internas y auditoría.
 
