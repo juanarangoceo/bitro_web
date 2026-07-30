@@ -4,12 +4,12 @@
 > trabajo (Codex, Claude Code u otra persona), **empieza por aquí**.
 
 - **Última actualización:** 2026-07-30
-- **Fase actual:** admin operativo interno
+- **Fase actual:** piloto asistido operable
 - **Estado:** corte vertical **cerrado y pulido**. La landing del piloto está publicada y
   pública en https://nitro-web-renderer.vercel.app, y `apps/dashboard` existe con
   auth, editor, imágenes, publicación, pedidos y métricas. La capa de IA (`packages/ai`) ya está integrada con cuotas y auditoría; siguen abiertas las decisiones de §25 que requieren definición comercial. El 30 jul comenzó `apps/admin`, solicitado para operar clientes de forma asistida antes de habilitar autoservicio.
 
-**Admin operativo — primer corte local:**
+**Admin operativo — desplegado:**
 
 - Aplicación separada en `apps/admin`, puerto 3002.
 - Acceso limitado por sesión + `platform_admins`.
@@ -17,17 +17,20 @@
 - Oferta y dominios por sitio.
 - Catálogo de plantillas, versiones validadas y ciclo de aprobación.
 - Toda mutación escribe `audit_log`.
-- Falta aplicar la migración `0013`, conceder el primer operador, verificar contra
-  Supabase y desplegar.
+- Migración `0013` aplicada en `zdhdhlqnwubckdnqonxp`; un operador activo.
+- Proyecto Vercel `nitro-web-admin`, raíz `apps/admin`, producción en
+  `https://nitro-web-admin.vercel.app`.
+- Publicación y rollback en modo soporte, revisión humana, dominios vía API de
+  Vercel, pedidos, métricas, consumo de IA, notas internas y auditoría.
 
 **Verificación al cierre de esta fase:**
 
 ```
-pnpm test                    → 73 pruebas en verde
+pnpm test                    → 75 pruebas en verde
 pnpm typecheck               → sin errores
 next build (renderer)        → compila
-./scripts/validate-sql.sh    → 24 tablas con RLS; AISLAMIENTO MULTI-TENANT: OK
-Supabase (zdhdhlqnwubckdnqonxp) → 24 tablas, 24 con RLS, 37 políticas, 0 grants a anon
+./scripts/validate-sql.sh    → 25 tablas con RLS; AISLAMIENTO MULTI-TENANT: OK
+Supabase (zdhdhlqnwubckdnqonxp) → 25 tablas, 25 con RLS, 37 políticas, 0 grants a anon
 get_advisors(security)       → sin bloqueantes (ver §2, "Esquema en Supabase")
 REST con la clave publicable → 42501 en toda tabla; solo responden las dos funciones
 Storage con sesión del owner → escritura propia 200, ajena 400, SVG 400, lectura pública 200
@@ -55,7 +58,7 @@ La especificación completa está en Google Drive (carpeta `openclaw`, file id
 ### Monorepo
 
 pnpm workspaces, Node 22, TypeScript estricto (`noUncheckedIndexedAccess`),
-Vitest. `pnpm test` → **73 pruebas en verde**.
+Vitest. `pnpm test` → **75 pruebas en verde**.
 
 ### `packages/shared`
 
@@ -277,17 +280,15 @@ La decisión operativa del 30 jul adelanta únicamente el **admin interno asisti
 Juan vincula y opera los clientes. Siguen aplazados el autoservicio, billing automático
 y el selector multiempresa del cliente.
 
-### 3.3 Admin operativo — siguiente cierre
+### 3.3 Admin operativo — completado el 30 jul 2026
 
-1. Aplicar `0013_platform_admins.sql` en Supabase.
-2. Conceder el primer acceso con
-   `pnpm db:grant-admin -- --email=<operador> --name="<nombre>"`.
-3. Verificar alta de tenant, invitación, sitio, oferta y dominio con datos reales.
-4. Integrar la verificación de dominios con Vercel; marcar `active` manualmente es
-   solo una herramienta operativa controlada.
-5. Añadir publicación en modo soporte sin saltarse el validador ni la revisión
-   humana.
-6. Desplegar `apps/admin` como proyecto Vercel separado y restringido.
+El admin interno ya permite operar el piloto asistido. No convierte la creación de
+plantillas visuales en autoservicio: Codex o Claude Code implementan y registran el
+componente en el renderer; el admin gestiona su catálogo, contrato, versiones,
+aprobación e instalación.
+
+La URL `*.vercel.app` conserva Deployment Protection. El operador debe pertenecer al
+equipo de Vercel y además autenticarse en Nitro Web; son dos fronteras deliberadas.
 
 ---
 

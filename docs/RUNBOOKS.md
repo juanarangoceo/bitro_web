@@ -190,11 +190,12 @@ reincidencia), registrar en `audit_log` y notificar.
 
 Producción se despliega **solo vía Vercel**, nunca por Docker ni CLI local.
 
-Dos proyectos separados, cada uno con sus propias variables (ver
+Tres proyectos separados, cada uno con sus propias variables (ver
 [`ENTORNO.md`](ENTORNO.md)):
 
 - `nitro-web-renderer` → raíz `apps/renderer`
 - `nitro-web-dashboard` → raíz `apps/dashboard`
+- `nitro-web-admin` → raíz `apps/admin`
 
 El wildcard `*.nitrolanding.co` se configura **solo** en el proyecto del
 renderer. El dominio corporativo nunca apunta al renderer.
@@ -219,6 +220,11 @@ Variables del renderer cargadas en producción: `NEXT_PUBLIC_SUPABASE_URL`,
 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`,
 `NITRO_WEB_ROOT_DOMAIN` y `CACHE_REVALIDATION_SECRET`. El dashboard no recibe
 `SUPABASE_SECRET_KEY`; sus operaciones usan la sesión y RLS.
+
+El admin sí recibe `SUPABASE_SECRET_KEY`, pero es un proyecto distinto: primero
+valida la sesión y la fila activa en `platform_admins`, y audita cada mutación
+transversal. Su URL de producción es `https://nitro-web-admin.vercel.app` y mantiene
+Deployment Protection.
 
 **`preview` quedó a propósito sin credenciales.** §14.3 exige que preview y
 producción usen credenciales distintas, y hoy solo existe un proyecto Supabase.
