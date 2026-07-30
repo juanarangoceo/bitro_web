@@ -18,6 +18,7 @@ export function Shell({ operador, titulo, children }: {
           </nav>
           <div className="flex items-center gap-3 text-xs text-ink-200">
             <span>{operador.nombre}</span>
+            <Link href="/contrasena" className="underline">Contraseña</Link>
             <form action="/auth/signout" method="post"><button className="underline">Salir</button></form>
           </div>
         </div>
@@ -29,4 +30,3 @@ export function Shell({ operador, titulo, children }: {
     </div>
   );
 }
-
