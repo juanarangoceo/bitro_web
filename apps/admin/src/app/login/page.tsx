@@ -35,9 +35,7 @@ export default async function Login({ searchParams }: {
     const supabase = await supabaseSesion();
     const origen = process.env.NITRO_WEB_ADMIN_URL;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: origen
-        ? `${origen}/auth/confirm?destino=${encodeURIComponent('/contrasena')}`
-        : undefined,
+      redirectTo: origen ? `${origen}/auth/recovery` : undefined,
     });
     if (error?.status === 429) redirect('/login?error=limite');
     if (error) redirect('/login?error=recuperacion');

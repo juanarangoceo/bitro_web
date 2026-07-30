@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLICAS = ['/login', '/auth/confirm', '/sin-acceso'];
+const PUBLICAS = ['/login', '/auth/confirm', '/auth/recovery', '/sin-acceso'];
 
 export async function proxy(request: NextRequest) {
   let respuesta = NextResponse.next({ request });
@@ -40,4 +40,3 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp|avif)$).*)'],
 };
-
