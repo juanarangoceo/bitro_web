@@ -20,6 +20,8 @@
 - Migración `0013` aplicada en `zdhdhlqnwubckdnqonxp`; un operador activo.
 - Proyecto Vercel `nitro-web-admin`, raíz `apps/admin`, producción en
   `https://nitro-web-admin.vercel.app`.
+- El callback de acceso acepta enlaces PKCE con `code` y plantillas de correo
+  con `token_hash` + `type`.
 - Publicación y rollback en modo soporte, revisión humana, dominios vía API de
   Vercel, pedidos, métricas, consumo de IA, notas internas y auditoría.
 
