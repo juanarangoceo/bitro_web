@@ -7,18 +7,18 @@ const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-serif', displa
 const ruta = '/templates/coffee-maker';
 
 const recursos = {
-  __template_hero_mobile: `${ruta}/hero-mobile.webp`,
-  __template_hero_desktop: `${ruta}/hero-desktop.webp`,
-  __template_gallery_1: `${ruta}/gallery-1.webp`,
-  __template_gallery_2: `${ruta}/gallery-2.webp`,
-  __template_gallery_3: `${ruta}/grinder.webp`,
-  __template_gallery_4: `${ruta}/gallery-4.jpg`,
-  __template_recipe_1: `${ruta}/tinto.png`,
-  __template_recipe_2: `${ruta}/cappuccino.jpg`,
-  __template_recipe_3: `${ruta}/affogato.png`,
-  __template_recipe_4: `${ruta}/coldbrew.png`,
-  __template_bundle_1: `${ruta}/grinder.webp`,
-  __template_bundle_2: `${ruta}/hero-desktop.webp`,
+  __template_hero_mobile: `template:${ruta}/hero-mobile.webp`,
+  __template_hero_desktop: `template:${ruta}/hero-desktop.webp`,
+  __template_gallery_1: `template:${ruta}/gallery-1.webp`,
+  __template_gallery_2: `template:${ruta}/gallery-2.webp`,
+  __template_gallery_3: `template:${ruta}/grinder.webp`,
+  __template_gallery_4: `template:${ruta}/gallery-4.jpg`,
+  __template_recipe_1: `template:${ruta}/tinto.png`,
+  __template_recipe_2: `template:${ruta}/cappuccino.jpg`,
+  __template_recipe_3: `template:${ruta}/affogato.png`,
+  __template_recipe_4: `template:${ruta}/coldbrew.png`,
+  __template_bundle_1: `template:${ruta}/grinder.webp`,
+  __template_bundle_2: `template:${ruta}/hero-desktop.webp`,
 } as const;
 
 /**

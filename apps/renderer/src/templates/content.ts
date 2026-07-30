@@ -65,6 +65,13 @@ export function assetUrl(
   const storagePath = assets[assetId];
   if (!storagePath) return undefined;
 
+  // Las imágenes que forman parte del código de una plantilla no viven en el
+  // bucket del tenant. El prefijo explícito evita confundirlas con storage_path
+  // y solo acepta el directorio público reservado para plantillas.
+  if (storagePath.startsWith('template:/templates/')) {
+    return storagePath.slice('template:'.length);
+  }
+
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!base) return undefined;
 
