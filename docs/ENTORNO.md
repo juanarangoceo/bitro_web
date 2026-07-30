@@ -36,6 +36,12 @@ que no necesita, no debe tenerlo.
 El renderer **no** puede gestionar dominios ni llamar a Gemini. Si alguna vez necesita
 `VERCEL_TOKEN`, algo se diseñó mal: esa operación pertenece al dashboard.
 
+`apps/admin` es una aplicación interna separada. Recibe las dos variables públicas de
+Supabase, `SUPABASE_SECRET_KEY`, `NITRO_WEB_ADMIN_URL` y
+`NITRO_WEB_DASHBOARD_URL`. Su clave secreta solo se usa en servidor después de
+verificar la sesión y la fila activa en `platform_admins`; no debe copiar las claves
+de Gemini ni del renderer si no las necesita.
+
 **El renderer sí necesita `SUPABASE_SECRET_KEY`**, y no es una concesión: el visitante
 de una landing es `anon`, y `0008_grants.sql` le quita el acceso a *todas* las tablas.
 Sin la clave secreta el renderer no puede resolver `hostname → site_id` ni leer la
@@ -49,6 +55,16 @@ Next carga `.env.local` desde la raíz de **cada app**, no desde la del monorepo
 crear `apps/renderer/.env.local` con solo las variables marcadas ✅ para el renderer.
 Copiar el archivo de la raíz entero funcionaría, pero le daría al renderer claves que
 no le corresponden.
+
+Para el admin se crea `apps/admin/.env.local` con:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+NITRO_WEB_ADMIN_URL=http://localhost:3002
+NITRO_WEB_DASHBOARD_URL=http://localhost:3001
+```
 
 ## Claves de Supabase
 

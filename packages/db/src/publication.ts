@@ -31,6 +31,7 @@ export type PublishResult =
 export async function publishSite(
   supabase: SupabaseClient,
   siteId: string,
+  options?: { publishedBy?: string },
 ): Promise<PublishResult> {
   const { data: site, error: siteError } = await supabase
     .from('sites')
@@ -116,6 +117,7 @@ export async function publishSite(
         shipping_amount: offer.shipping_amount,
         currency: offer.currency,
       },
+      published_by: options?.publishedBy,
     })
     .select('id, publication_number')
     .single();
@@ -172,6 +174,101 @@ export async function rollbackSite(
 }
 
 /**
+ * Publicación transversal del equipo de Nitro Web.
+ *
+ * A diferencia de `publishSite`, aquí RLS no puede autorizar porque el operador
+ * no pertenece al tenant del cliente. La función exige y comprueba un operador
+ * activo de plataforma antes de delegar al mismo validador y flujo de snapshot.
+ */
+export async function publishSiteAsSupport(
+  supabase: SupabaseClient,
+  siteId: string,
+  input: { actorUserId: string; reviewedBy: string; reason: string },
+): Promise<PublishResult> {
+  const autorizado = await isActivePlatformAdmin(supabase, input.actorUserId);
+  if (!autorizado) {
+    return { ok: false, code: 'not_found', errors: ['Operador de plataforma no autorizado'] };
+  }
+  if (!input.reviewedBy.trim() || !input.reason.trim()) {
+    return { ok: false, code: 'error', errors: ['La revisión y el motivo son obligatorios'] };
+  }
+
+  const { data: previousSite } = await supabase
+    .from('sites')
+    .select('first_publish_reviewed_at')
+    .eq('id', siteId)
+    .maybeSingle();
+  const reviewedAt = new Date().toISOString();
+  const { data: reviewedSite, error: reviewError } = await supabase
+    .from('sites')
+    .update({ first_publish_reviewed_at: reviewedAt })
+    .eq('id', siteId)
+    .select('tenant_id')
+    .single();
+  if (reviewError || !reviewedSite) {
+    return { ok: false, code: 'error', errors: [reviewError?.message ?? 'No se guardó la revisión'] };
+  }
+
+  const result = await publishSite(supabase, siteId, { publishedBy: input.actorUserId });
+  if (!result.ok) {
+    await supabase
+      .from('sites')
+      .update({ first_publish_reviewed_at: previousSite?.first_publish_reviewed_at ?? null })
+      .eq('id', siteId);
+    return result;
+  }
+
+  const { error: auditError } = await supabase.from('audit_log').insert({
+    tenant_id: reviewedSite.tenant_id,
+    actor_user_id: input.actorUserId,
+    is_support_mode: true,
+    support_reason: input.reason.trim(),
+    action: 'site.published_as_support',
+    entity_type: 'site',
+    entity_id: siteId,
+    payload_json: {
+      publication_id: result.publicationId,
+      publication_number: result.publicationNumber,
+      reviewed_by: input.reviewedBy.trim(),
+    },
+  });
+  if (auditError) {
+    return { ok: false, code: 'error', errors: [`Publicó, pero falló la auditoría: ${auditError.message}`] };
+  }
+  return result;
+}
+
+/** Rollback transversal con la misma autorización explícita y auditoría. */
+export async function rollbackSiteAsSupport(
+  supabase: SupabaseClient,
+  siteId: string,
+  publicationId: string,
+  input: { actorUserId: string; reason: string },
+): Promise<{ ok: boolean; error?: string }> {
+  if (!(await isActivePlatformAdmin(supabase, input.actorUserId))) {
+    return { ok: false, error: 'Operador de plataforma no autorizado' };
+  }
+  if (!input.reason.trim()) return { ok: false, error: 'El motivo es obligatorio' };
+
+  const result = await rollbackSite(supabase, siteId, publicationId);
+  if (!result.ok) return result;
+
+  const { data: site } = await supabase.from('sites').select('tenant_id').eq('id', siteId).single();
+  if (!site) return { ok: false, error: 'No se pudo auditar el rollback' };
+  const { error } = await supabase.from('audit_log').insert({
+    tenant_id: site.tenant_id,
+    actor_user_id: input.actorUserId,
+    is_support_mode: true,
+    support_reason: input.reason.trim(),
+    action: 'site.rolled_back_as_support',
+    entity_type: 'site',
+    entity_id: siteId,
+    payload_json: { publication_id: publicationId },
+  });
+  return error ? { ok: false, error: `Rollback aplicado, pero falló la auditoría: ${error.message}` } : { ok: true };
+}
+
+/**
  * ¿Hay cambios guardados que aún no son públicos? (§4.5, `changes_pending`)
  *
  * No es una columna: se deriva comparando timestamps. Almacenarlo obligaría a
@@ -189,4 +286,17 @@ export function hasPendingChanges(params: {
 function firstOf<T>(value: T | T[] | null | undefined): T | undefined {
   if (!value) return undefined;
   return Array.isArray(value) ? value[0] : value;
+}
+
+async function isActivePlatformAdmin(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('platform_admins')
+    .select('user_id')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .maybeSingle();
+  return Boolean(data);
 }

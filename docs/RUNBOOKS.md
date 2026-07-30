@@ -225,3 +225,24 @@ producción usen credenciales distintas, y hoy solo existe un proyecto Supabase.
 Cargar ahí las de producción convertiría cualquier rama en acceso total a los
 datos reales de los clientes. Un despliegue de preview fallará con "Falta la
 variable de entorno", que es el fallo correcto: ruidoso y sin exponer nada.
+
+## R11 — Habilitar el admin operativo
+
+El admin es un tercer proyecto Vercel con raíz `apps/admin`. No comparte dominio,
+cookies ni variables con el dashboard del cliente.
+
+1. Aplicar las migraciones, incluida `0013_platform_admins.sql`.
+2. Confirmar que el operador ya existe en Supabase Auth.
+3. Desde una terminal interna con `.env.local` y la clave secreta:
+
+   ```bash
+   pnpm db:grant-admin -- --email=operador@ejemplo.com --name="Operador"
+   ```
+
+4. Crear `apps/admin/.env.local` según `ENTORNO.md`.
+5. Ejecutar `pnpm dev:admin` y entrar en `http://localhost:3002`.
+6. Confirmar que otro usuario autenticado llega a `/sin-acceso`.
+
+Para retirar acceso se fija `platform_admins.is_active = false`; no se borra el
+usuario ni su historial. El admin no ofrece una pantalla para conceder privilegios:
+una sesión comprometida no debe poder fabricar otro administrador.
