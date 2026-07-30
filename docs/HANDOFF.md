@@ -22,6 +22,8 @@
   `https://nitro-web-admin.vercel.app`.
 - El callback de acceso acepta enlaces PKCE con `code` y plantillas de correo
   con `token_hash` + `type`.
+- El operador puede crear o restablecer su contraseña desde el login y
+  cambiarla desde `/contrasena`; la actualización usa su sesión de Supabase.
 - Publicación y rollback en modo soporte, revisión humana, dominios vía API de
   Vercel, pedidos, métricas, consumo de IA, notas internas y auditoría.
 
