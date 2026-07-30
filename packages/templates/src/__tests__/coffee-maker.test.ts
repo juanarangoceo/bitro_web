@@ -11,6 +11,8 @@ import { coffeeMakerDefaultContent } from '../coffee-maker/default-content';
 import { coffeeMakerManifestV11 } from '../coffee-maker/manifest-v1-1';
 import { coffeeMakerContentSchemaV11 } from '../coffee-maker/schema-v1-1';
 import { coffeeMakerDefaultContentV11 } from '../coffee-maker/default-content-v1-1';
+import { coffeeMakerManifestV12 } from '../coffee-maker/manifest-v1-2';
+import { coffeeMakerDefaultContentV12 } from '../coffee-maker/default-content-v1-2';
 import { isComponentRegistered } from '../registry';
 
 describe('manifest de coffee-maker', () => {
@@ -141,5 +143,24 @@ describe('coffee-maker 1.1', () => {
     expect(schema).not.toContain('countdown_ends_at');
     expect(schema).not.toContain('"x"');
     expect(schema).not.toContain('"y"');
+  });
+});
+
+describe('coffee-maker 1.2', () => {
+  it('cumple el contrato y registra un componente propio', () => {
+    const result = validateManifest(coffeeMakerManifestV12);
+    if (!result.ok) {
+      throw new Error(`Manifest 1.2 inválido:\n  ${result.errors.join('\n  ')}`);
+    }
+    expect(coffeeMakerManifestV12.version).toBe('1.2.0');
+    expect(coffeeMakerManifestV12.component_key).toBe('coffeeMakerV12');
+    expect(isComponentRegistered(coffeeMakerManifestV12.component_key)).toBe(true);
+  });
+
+  it('restaura el vídeo, cuatro recetas y valores del kit', () => {
+    expect(coffeeMakerDefaultContentV12.problem?.video_url).toContain('cloudinary.com');
+    expect(coffeeMakerDefaultContentV12.recipes?.items).toHaveLength(4);
+    expect(coffeeMakerDefaultContentV12.bundle?.items).toHaveLength(2);
+    expect(coffeeMakerDefaultContentV12.savings?.current_annual_amount).toBe(7300000);
   });
 });

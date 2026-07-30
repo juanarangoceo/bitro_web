@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import type { ResolvedSite } from '@nitro-web/db';
 import { CoffeeMakerV1 } from './coffee-maker/CoffeeMakerV1';
+import { CoffeeMakerV12 } from './coffee-maker/CoffeeMakerV12';
 
 /**
  * Registro de componentes de plantilla.
@@ -23,6 +24,7 @@ export interface TemplateProps {
 const COMPONENTS: Record<string, (props: TemplateProps) => ReactElement> = {
   coffeeMakerV1: CoffeeMakerV1,
   coffeeMakerV11: CoffeeMakerV1,
+  coffeeMakerV12: CoffeeMakerV12,
 };
 
 /**

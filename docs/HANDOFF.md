@@ -29,6 +29,18 @@
 - Publicación y rollback en modo soporte, revisión humana, dominios vía API de
   Vercel, pedidos, métricas, consumo de IA, notas internas y auditoría.
 
+**Coffee Maker 1.2 — en revisión:**
+
+- Se creó `coffeeMakerV12` como componente independiente; `1.0` y `1.1`
+  permanecen intactas.
+- Recupera navegación, pie, tipografías Inter/Fraunces, vídeo, galería completa,
+  cuatro recetas y recursos visuales del kit tomados del proyecto original.
+- Los assets del tenant tienen prioridad; los recursos propios de la plantilla
+  actúan como fallback y no se guardan como IDs ficticios en el contenido.
+- La versión `1.2.0` está sembrada en `development` y el borrador del piloto fue
+  migrado a ella. Su snapshot público sigue en `1.1` hasta aprobar y publicar.
+- Preview del piloto: `/preview/76b9f0ec-be6e-4492-a281-f97edccb3297`.
+
 **Verificación al cierre de esta fase:**
 
 ```

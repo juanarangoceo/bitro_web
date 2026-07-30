@@ -20,6 +20,7 @@
     "db:seed-site": "tsx scripts/seed-site.ts",
     "db:seed-assets": "tsx scripts/seed-assets.ts",
     "db:migrate-coffee-v11": "tsx scripts/migrate-coffee-maker-v11.ts",
+    "db:migrate-coffee-v12": "tsx scripts/migrate-coffee-maker-v12.ts",
     "db:publish-site": "tsx scripts/publish-site.ts",
     "db:seed-domain": "tsx scripts/seed-domain.ts",
     "db:grant-admin": "tsx scripts/grant-platform-admin.ts"

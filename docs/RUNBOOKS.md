@@ -117,14 +117,18 @@ ni `resolveSiteByPreviewToken` filtran por estado de la versión, así que un si
 puede previsualizarse contra una versión en desarrollo: es justo lo que permite
 cumplir el paso 3 antes del 5.
 
-Versión vigente: `coffee-maker` 1.1.0. Para migrar deliberadamente el sitio piloto:
+Versión estable: `coffee-maker` 1.1.0. La versión `1.2.0` restaura con fidelidad
+los recursos y la composición del sitio Coffee Maker Pro y se revisa primero en
+`development`. Para preparar deliberadamente el borrador del piloto:
 
 ```bash
-pnpm db:migrate-coffee-v11
+pnpm db:migrate-coffee-v12
 ```
 
-**No altera sitios existentes.** Un sitio queda fijado a su
-`template_version_id` (§7.3). Publicar 1.1 no migra los sitios en 1.0.
+El script cambia la versión del borrador, pero **no reemplaza el snapshot
+público**. Solo una publicación explícita promueve el contenido revisado. Los
+demás sitios tampoco se migran: cada uno queda fijado a su
+`template_version_id` (§7.3).
 
 ## R5 — Revertir una publicación (rollback)
 

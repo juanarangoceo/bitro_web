@@ -16,7 +16,11 @@ import { ContadorOferta, HotspotsInteractivos, RecetasInteractivas } from './Int
  * `create_public_order()` calcula el total. Así lo que ve el comprador y lo que
  * cobra el servidor no pueden divergir.
  */
-export function CoffeeMakerV1({ site, isPreview }: TemplateProps) {
+export function CoffeeMakerV1({
+  site,
+  isPreview,
+  referenceOrder = false,
+}: TemplateProps & { referenceOrder?: boolean }) {
   const { content, offer, assets } = site;
 
   const priceAmount = typeof offer.price_amount === 'number' ? offer.price_amount : undefined;
@@ -28,8 +32,17 @@ export function CoffeeMakerV1({ site, isPreview }: TemplateProps) {
     <main className="min-h-screen bg-coffee-50 pb-24 text-coffee-900 md:pb-0">
       <Hero content={content} assets={assets} />
       <Problem content={content} />
-      <Gallery content={content} assets={assets} />
-      <Hotspots content={content} assets={assets} />
+      {referenceOrder ? (
+        <>
+          <Hotspots content={content} assets={assets} />
+          <Gallery content={content} assets={assets} />
+        </>
+      ) : (
+        <>
+          <Gallery content={content} assets={assets} />
+          <Hotspots content={content} assets={assets} />
+        </>
+      )}
       <Recipes content={content} assets={assets} />
       <Bundle content={content} assets={assets} />
       <Savings content={content} />
@@ -193,7 +206,7 @@ function Recipes({ content, assets }: ContentProps & AssetProps) {
   });
   if (recipes.length === 0) return null;
   return (
-    <section className="border-t border-coffee-200 bg-coffee-50 px-6 py-20 md:py-28">
+    <section id="recetas" className="scroll-mt-20 border-t border-coffee-200 bg-coffee-50 px-6 py-20 md:py-28">
       <div className="mx-auto max-w-7xl">
         <header className="mx-auto mb-12 max-w-4xl text-center">
           {text(data, 'eyebrow') ? <span className="text-sm font-bold uppercase tracking-widest text-gold-600">{text(data, 'eyebrow')}</span> : null}
@@ -216,7 +229,7 @@ function Problem({ content }: ContentProps) {
   if (points.length === 0) return null;
 
   return (
-    <section className="border-t border-coffee-100 bg-white px-6 py-20 md:py-28">
+    <section id="experiencia" className="scroll-mt-20 border-t border-coffee-100 bg-white px-6 py-20 md:py-28">
       <div className="mx-auto max-w-7xl">
         <header className="mb-16 text-center">
           {text(problem, 'eyebrow') && (
@@ -343,7 +356,7 @@ function Bundle({ content, assets }: ContentProps & AssetProps) {
   if (items.length === 0) return null;
 
   return (
-    <section className="relative overflow-hidden bg-coffee-900 px-6 py-24 text-white md:py-32">
+    <section id="kit" className="relative scroll-mt-20 overflow-hidden bg-coffee-900 px-6 py-24 text-white md:py-32">
       <div className="pointer-events-none absolute left-1/2 top-1/2 -z-0 h-[800px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold-600/10 blur-[100px]" />
 
       <div className="relative z-10 mx-auto max-w-7xl">
@@ -450,7 +463,7 @@ function Savings({ content }: ContentProps) {
   const annual = num(savings, 'current_annual_amount');
 
   return (
-    <section className="border-t border-coffee-200 bg-coffee-50 px-6 py-20 md:py-32">
+    <section id="ahorro" className="scroll-mt-20 border-t border-coffee-200 bg-coffee-50 px-6 py-20 md:py-32">
       <div className="mx-auto max-w-6xl">
         <header className="mb-16 text-center">
           <h2 className="mb-6 font-serif text-4xl font-bold md:text-5xl">
