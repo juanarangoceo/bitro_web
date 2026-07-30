@@ -293,6 +293,21 @@ select pg_temp.assert_eq((select count(*) from public.sites), 0,
 select pg_temp.assert_eq((select count(*) from public.orders), 0,
   'Un usuario sin sesión no ve ningún pedido');
 
+do $$
+declare
+  bloqueado boolean := false;
+begin
+  begin
+    perform count(*) from public.platform_admins;
+  exception when insufficient_privilege then
+    bloqueado := true;
+  end;
+  if not bloqueado then
+    raise exception 'FALLA: un usuario autenticado enumeró administradores de plataforma';
+  end if;
+  raise notice '  ok  Un usuario autenticado NO enumera administradores de plataforma';
+end $$;
+
 reset role;
 
 do $$ begin raise notice 'AISLAMIENTO MULTI-TENANT: OK'; end $$;

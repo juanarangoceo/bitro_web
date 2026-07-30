@@ -10,6 +10,7 @@
   "scripts": {
     "dev:renderer": "pnpm --filter @nitro-web/renderer dev",
     "dev:dashboard": "pnpm --filter @nitro-web/dashboard dev",
+    "dev:admin": "pnpm --filter @nitro-web/admin dev",
     "build": "pnpm -r --filter './packages/*' build && pnpm -r --filter './apps/*' build",
     "typecheck": "pnpm -r typecheck && tsc --noEmit -p scripts",
     "lint": "pnpm -r lint",
@@ -20,7 +21,8 @@
     "db:seed-assets": "tsx scripts/seed-assets.ts",
     "db:migrate-coffee-v11": "tsx scripts/migrate-coffee-maker-v11.ts",
     "db:publish-site": "tsx scripts/publish-site.ts",
-    "db:seed-domain": "tsx scripts/seed-domain.ts"
+    "db:seed-domain": "tsx scripts/seed-domain.ts",
+    "db:grant-admin": "tsx scripts/grant-platform-admin.ts"
   },
   "devDependencies": {
     "@nitro-web/contracts": "workspace:*",

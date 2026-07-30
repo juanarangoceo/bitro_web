@@ -3,11 +3,22 @@
 > **Documento de traspaso.** Se actualiza al cerrar cada fase. Si retomas el
 > trabajo (Codex, Claude Code u otra persona), **empieza por aquí**.
 
-- **Última actualización:** 2026-07-29
-- **Fase actual:** piloto validable (§19.1 de la especificación)
+- **Última actualización:** 2026-07-30
+- **Fase actual:** admin operativo interno
 - **Estado:** corte vertical **cerrado y pulido**. La landing del piloto está publicada y
   pública en https://nitro-web-renderer.vercel.app, y `apps/dashboard` existe con
-  auth, editor, imágenes, publicación, pedidos y métricas. La capa de IA (`packages/ai`) ya está integrada con cuotas y auditoría; siguen abiertas las decisiones de §25 que requieren definición comercial.
+  auth, editor, imágenes, publicación, pedidos y métricas. La capa de IA (`packages/ai`) ya está integrada con cuotas y auditoría; siguen abiertas las decisiones de §25 que requieren definición comercial. El 30 jul comenzó `apps/admin`, solicitado para operar clientes de forma asistida antes de habilitar autoservicio.
+
+**Admin operativo — primer corte local:**
+
+- Aplicación separada en `apps/admin`, puerto 3002.
+- Acceso limitado por sesión + `platform_admins`.
+- Alta y estado de tenants, invitación de owners e instalación de sitios.
+- Oferta y dominios por sitio.
+- Catálogo de plantillas, versiones validadas y ciclo de aprobación.
+- Toda mutación escribe `audit_log`.
+- Falta aplicar la migración `0013`, conceder el primer operador, verificar contra
+  Supabase y desplegar.
 
 **Verificación al cierre de esta fase:**
 
@@ -261,6 +272,22 @@ propio; el servicio compartido de Supabase sirve únicamente para pruebas limita
 Selector multiempresa, gestión autoservicio de dominios, admin maestro, billing y SMTP
 pertenecen a la v1 comercial. El piloto usa un tenant y el alta de dominios continúa
 mediante `pnpm db:seed-domain`.
+
+La decisión operativa del 30 jul adelanta únicamente el **admin interno asistido**:
+Juan vincula y opera los clientes. Siguen aplazados el autoservicio, billing automático
+y el selector multiempresa del cliente.
+
+### 3.3 Admin operativo — siguiente cierre
+
+1. Aplicar `0013_platform_admins.sql` en Supabase.
+2. Conceder el primer acceso con
+   `pnpm db:grant-admin -- --email=<operador> --name="<nombre>"`.
+3. Verificar alta de tenant, invitación, sitio, oferta y dominio con datos reales.
+4. Integrar la verificación de dominios con Vercel; marcar `active` manualmente es
+   solo una herramienta operativa controlada.
+5. Añadir publicación en modo soporte sin saltarse el validador ni la revisión
+   humana.
+6. Desplegar `apps/admin` como proyecto Vercel separado y restringido.
 
 ---
 

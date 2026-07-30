@@ -17,7 +17,9 @@ export {
 
 export {
   publishSite,
+  publishSiteAsSupport,
   rollbackSite,
+  rollbackSiteAsSupport,
   hasPendingChanges,
   type PublishResult,
 } from './publication';
