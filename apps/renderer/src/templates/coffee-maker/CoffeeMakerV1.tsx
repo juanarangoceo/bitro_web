@@ -3,7 +3,12 @@ import { formatMoney, savingsPercent, type Currency } from '@nitro-web/shared';
 import type { TemplateProps } from '../registry';
 import { assetUrl, bool, list, num, section, text } from '../content';
 import { OrderForm } from './OrderForm';
-import { ContadorOferta, HotspotsInteractivos, RecetasInteractivas } from './InteractiveSections';
+import {
+  ContadorOferta,
+  HotspotsInteractivos,
+  RecetasInteractivas,
+  ReproductorVideo,
+} from './InteractiveSections';
 
 /**
  * Plantilla Coffee Maker v1.
@@ -183,6 +188,9 @@ function Hotspots({ content, assets }: ContentProps & AssetProps) {
         {text(data, 'description') ? <p className="mt-4 text-lg text-coffee-600">{text(data, 'description')}</p> : null}
       </header>
       <HotspotsInteractivos image={image} title={title} points={points} />
+      <p className="mt-6 text-center text-sm font-medium text-coffee-500 md:hidden">
+        Toca los puntos para explorar
+      </p>
     </section>
   );
 }
@@ -253,14 +261,10 @@ function Problem({ content }: ContentProps) {
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
           {text(problem, 'video_url') && (
             <figure className="flex flex-col items-center">
-              <video
-                className="w-full rounded-[2rem] shadow-2xl"
-                controls
-                playsInline
-                preload="metadata"
-              >
-                <source src={text(problem, 'video_url')} type="video/mp4" />
-              </video>
+              <ReproductorVideo
+                src={text(problem, 'video_url') ?? ''}
+                label={text(problem, 'video_caption')}
+              />
               {text(problem, 'video_caption') && (
                 <figcaption className="mt-6 max-w-sm text-center italic text-coffee-400">
                   {text(problem, 'video_caption')}
@@ -273,19 +277,28 @@ function Problem({ content }: ContentProps) {
             {points.map((point, i) => (
               <article
                 key={i}
-                className="rounded-[2rem] border border-coffee-100 bg-coffee-50 p-6 shadow-sm md:p-10"
+                className="rounded-[2rem] border border-coffee-100 bg-coffee-50 p-6 shadow-sm transition-colors hover:border-gold-300 md:p-10"
               >
-                <h3 className="mb-4 text-2xl font-bold md:text-3xl">
-                  {i + 1}. {text(point, 'title')}
-                </h3>
-                <p className="text-lg leading-relaxed text-coffee-700">
-                  <span className="font-bold text-red-500">Lo que pasa hoy:</span>{' '}
-                  {text(point, 'mistake')}
-                </p>
-                <p className="mt-3 text-lg leading-relaxed text-coffee-700">
-                  <span className="font-bold text-green-600">La solución:</span>{' '}
-                  {text(point, 'solution')}
-                </p>
+                <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-6">
+                  {/* El número va en una placa, no en línea con el título: separa
+                      visualmente los dos argumentos igual que en la referencia,
+                      sin inventar un vocabulario de iconos por plantilla. */}
+                  <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white font-serif text-2xl font-bold text-gold-600 shadow-md">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <h3 className="mb-4 text-2xl font-bold md:text-3xl">{text(point, 'title')}</h3>
+                    <p className="text-lg leading-relaxed text-coffee-700">
+                      <span className="font-bold text-red-500">Lo que pasa hoy:</span>{' '}
+                      {text(point, 'mistake')}
+                    </p>
+                    <p className="my-1 font-bold text-coffee-400">vs</p>
+                    <p className="text-lg leading-relaxed text-coffee-700">
+                      <span className="font-bold text-green-600">La solución:</span>{' '}
+                      {text(point, 'solution')}
+                    </p>
+                  </div>
+                </div>
               </article>
             ))}
           </div>
@@ -394,7 +407,12 @@ function Bundle({ content, assets }: ContentProps & AssetProps) {
                 className="relative flex flex-col overflow-hidden rounded-[2.5rem] border border-white/5 bg-coffee-950/80 p-8 shadow-2xl backdrop-blur-xl md:p-12"
               >
                 <span className="absolute right-0 top-0 rounded-bl-3xl bg-gradient-to-r from-gold-500 to-gold-600 px-8 py-3 text-sm font-bold tracking-widest">
-                  INCLUIDO
+                  {/* El valor por defecto es el que ya renderizaba la 1.1. Este
+                      componente sirve también a las versiones publicadas, así
+                      que cambiar el texto aquí cambiaría lo que ve un comprador
+                      en una landing con tráfico. La 1.2 pide 'GRATIS' desde su
+                      contenido. */}
+                  {text(bundle, 'badge_label') ?? 'INCLUIDO'}
                 </span>
 
                 {src && (
@@ -461,6 +479,7 @@ function Savings({ content }: ContentProps) {
   if (currentLines.length === 0 && alternativeLines.length === 0) return null;
 
   const annual = num(savings, 'current_annual_amount');
+  const dailyTotal = num(savings, 'current_total_amount');
 
   return (
     <section id="ahorro" className="scroll-mt-20 border-t border-coffee-200 bg-coffee-50 px-6 py-20 md:py-32">
@@ -476,7 +495,7 @@ function Savings({ content }: ContentProps) {
 
         <div className="flex flex-col overflow-hidden rounded-3xl border border-coffee-100 bg-white shadow-2xl md:flex-row">
           <div className="w-full border-b-2 border-dashed border-gray-300 bg-[#f8f5f2] p-8 md:w-1/2 md:border-b-0 md:border-r-2 md:p-12">
-            <div className="mx-auto max-w-sm border border-gray-200 bg-white p-6 font-mono text-sm shadow-sm">
+            <div className="relative mx-auto max-w-sm rotate-1 border border-gray-200 bg-white p-6 font-mono text-sm shadow-sm">
               <h3 className="border-b-2 border-dashed border-gray-300 pb-4 text-center text-lg font-bold uppercase tracking-widest">
                 {text(savings, 'current_label') ?? 'Hoy'}
               </h3>
@@ -488,6 +507,12 @@ function Savings({ content }: ContentProps) {
                   </li>
                 ))}
               </ul>
+              {dailyTotal !== undefined && (
+                <div className="mb-4 flex justify-between border-t-2 border-dashed border-gray-300 pt-4 text-lg font-bold">
+                  <span>{text(savings, 'current_total_label') ?? 'Total diario'}</span>
+                  <span>{formatMoney(dailyTotal, 'COP')}</span>
+                </div>
+              )}
               {annual !== undefined && (
                 <div className="rounded-lg border border-red-100 bg-red-50 p-4 text-center">
                   <p className="mb-1 text-xs font-bold uppercase tracking-widest text-red-500">
@@ -497,6 +522,11 @@ function Savings({ content }: ContentProps) {
                     {formatMoney(annual, 'COP')}
                   </p>
                 </div>
+              )}
+              {text(savings, 'current_note') && (
+                <p className="mt-6 text-center font-serif text-xs italic text-gray-400">
+                  {text(savings, 'current_note')}
+                </p>
               )}
             </div>
           </div>
@@ -519,6 +549,13 @@ function Savings({ content }: ContentProps) {
                 <p className="mb-2 text-sm uppercase tracking-widest text-gray-300">
                   {text(savings, 'savings_headline')}
                 </p>
+                {/* Sin cifra el recuadro queda vacío y parece roto, que es como
+                    se veía en 1.1: el campo no existía en el contrato. */}
+                {text(savings, 'savings_value') && (
+                  <p className="font-mono text-5xl font-bold tracking-tighter text-green-400 md:text-6xl">
+                    {text(savings, 'savings_value')}
+                  </p>
+                )}
                 {text(savings, 'savings_note') && (
                   <p className="mt-2 text-xs text-gray-400">{text(savings, 'savings_note')}</p>
                 )}
@@ -667,6 +704,56 @@ function Offer({
               </span>
             )}
 
+            {text(offer, 'product_name') && (
+              <div className="mb-4 flex items-start gap-4 border-b border-coffee-100 pb-4">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-coffee-100 text-2xl">
+                  ☕
+                </span>
+                <div>
+                  <h3 className="font-serif text-lg font-bold leading-tight md:text-xl">
+                    {text(offer, 'product_name')}
+                  </h3>
+                  {text(offer, 'product_subtitle') && (
+                    <p className="text-xs font-medium leading-tight text-coffee-500 md:text-sm">
+                      {text(offer, 'product_subtitle')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {list(offer, 'bonuses').length > 0 && (
+              <div className="mb-6 rounded-xl border border-gold-100 bg-gold-50/50 p-4">
+                <p className="mb-2 text-xs font-bold uppercase tracking-widest">
+                  {text(offer, 'bonuses_label') ?? 'Bonos incluidos'}
+                </p>
+                <ul className="space-y-2">
+                  {list(offer, 'bonuses').map((bonus, i) => {
+                    const valor = num(bonus, 'value_amount');
+                    return (
+                      <li key={i} className="flex items-center justify-between gap-2 text-sm">
+                        <span className="truncate font-medium text-coffee-700">
+                          {text(bonus, 'label')}
+                        </span>
+                        <span className="flex shrink-0 flex-col items-end">
+                          {valor !== undefined && (
+                            <span className="text-[10px] text-red-400 line-through md:text-xs">
+                              {formatMoney(valor, 'COP')}
+                            </span>
+                          )}
+                          {text(bonus, 'badge') && (
+                            <span className="text-[10px] font-bold text-green-600 md:text-xs">
+                              {text(bonus, 'badge')}
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
             <div className="mb-6 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-coffee-400">
                 Precio total hoy
@@ -694,9 +781,24 @@ function Offer({
               ctaSubtext={text(offer, 'cta_subtext')}
               isPreview={isPreview}
             />
+
+            {text(offer, 'payment_note') && (
+              <div className="mt-4 border-t border-coffee-100/50 pt-3 text-center text-xs font-medium text-coffee-500">
+                <p className="mb-2 font-bold">{text(offer, 'payment_label') ?? 'Medio de pago'}</p>
+                <span className="inline-block rounded-lg border border-green-200 bg-green-100 px-3 py-1.5 font-bold text-green-700">
+                  {text(offer, 'payment_note')}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {text(offer, 'closing_note') && (
+        <p className="mx-auto mt-10 max-w-7xl text-center text-sm font-medium text-coffee-500">
+          {text(offer, 'closing_note')}
+        </p>
+      )}
     </section>
   );
 }

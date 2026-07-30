@@ -1,9 +1,14 @@
-import { Fraunces, Inter } from 'next/font/google';
+import { Fraunces, Inter, JetBrains_Mono } from 'next/font/google';
 import type { TemplateProps } from '../registry';
+import { list, section, text } from '../content';
 import { CoffeeMakerV1 } from './CoffeeMakerV1';
+import { Navegacion, type EnlaceNav } from './BrandChrome';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-serif', display: 'swap' });
+// El bloque de ahorro imita una factura impresa; con la monoespaciada del
+// navegador las columnas de importes no alinean y el efecto se pierde.
+const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', display: 'swap' });
 const ruta = '/templates/coffee-maker';
 
 const recursos = {
@@ -17,8 +22,10 @@ const recursos = {
   __template_recipe_2: `template:${ruta}/cappuccino.jpg`,
   __template_recipe_3: `template:${ruta}/affogato.png`,
   __template_recipe_4: `template:${ruta}/coldbrew.png`,
+  // Solo el primer regalo tiene fotografía propia. El segundo es un libro
+  // digital: repetir ahí la foto de la máquina —que es lo que hacía el fallback
+  // anterior— hace parecer que el kit trae dos cafeteras.
   __template_bundle_1: `template:${ruta}/grinder.webp`,
-  __template_bundle_2: `template:${ruta}/hero-desktop.webp`,
 } as const;
 
 /**
@@ -32,13 +39,33 @@ export function CoffeeMakerV12({ site, isPreview }: TemplateProps) {
     assets: { ...recursos, ...site.assets },
   };
 
+  const brand = section(site.content, 'brand');
+  const nombre = text(brand, 'name') ?? site.siteName;
+
   return (
-    <div className={`${inter.variable} ${fraunces.variable} bg-coffee-50 font-sans text-coffee-900`}>
-      <Navegacion />
+    <div
+      className={`${inter.variable} ${fraunces.variable} ${mono.variable} bg-coffee-50 font-sans text-coffee-900`}
+    >
+      <Navegacion
+        name={nombre}
+        nameAccent={text(brand, 'name_accent')}
+        tagline={text(brand, 'tagline')}
+        links={enlaces(brand, 'nav_links')}
+        ctaLabel={text(brand, 'cta_label') ?? 'Pedir ahora'}
+      />
       <CoffeeMakerV1 site={sitioCompleto} isPreview={isPreview} referenceOrder />
-      <Pie />
+      <Pie content={site.content} nombre={nombre} acento={text(brand, 'name_accent')} />
     </div>
   );
+}
+
+/** Enlaces de navegación válidos: sin etiqueta o sin ancla no llevan a ninguna parte. */
+function enlaces(source: Record<string, unknown>, key: string): EnlaceNav[] {
+  return list(source, key).flatMap((item) => {
+    const label = text(item, 'label');
+    const anchor = text(item, 'anchor');
+    return label && anchor ? [{ label, anchor }] : [];
+  });
 }
 
 function completarImagenes(content: Record<string, unknown>): Record<string, unknown> {
@@ -61,7 +88,7 @@ function completarImagenes(content: Record<string, unknown>): Record<string, unk
     },
     gallery: { ...gallery, items: completarLista(gallery.items, ['__template_gallery_1', '__template_gallery_2', '__template_gallery_3', '__template_gallery_4']) },
     recipes: { ...recipes, items: completarLista(recipes.items, ['__template_recipe_1', '__template_recipe_2', '__template_recipe_3', '__template_recipe_4']) },
-    bundle: { ...bundle, items: completarLista(bundle.items, ['__template_bundle_1', '__template_bundle_2']) },
+    bundle: { ...bundle, items: completarLista(bundle.items, ['__template_bundle_1']) },
   };
 }
 
@@ -79,41 +106,97 @@ function objeto(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function Navegacion() {
-  return (
-    <header className="sticky top-0 z-40 border-b border-coffee-100/80 bg-coffee-50/95 backdrop-blur-xl">
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <a href="#" className="font-serif text-xl font-bold tracking-tight">Coffee Maker <span className="text-gold-600">Pro</span></a>
-        <div className="hidden items-center gap-7 text-sm font-semibold text-coffee-600 md:flex">
-          <a className="transition hover:text-gold-600" href="#experiencia">Experiencia</a>
-          <a className="transition hover:text-gold-600" href="#recetas">Resultados</a>
-          <a className="transition hover:text-gold-600" href="#kit">Kit regalo</a>
-          <a className="transition hover:text-gold-600" href="#ahorro">Ahorro</a>
-        </div>
-        <a href="#oferta" className="rounded-full bg-coffee-900 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-black">Pedir ahora</a>
-      </nav>
-    </header>
-  );
-}
+/**
+ * Pie de página.
+ *
+ * La columna legal es la razón de que exista como contenido y no como texto
+ * fijo: Meta y Google exigen que la política de datos sea alcanzable desde la
+ * landing, y esa política es del cliente, no de la plantilla. Si no tiene
+ * enlaces cargados, la columna no se dibuja — mejor ausente que apuntando a una
+ * página que no existe.
+ */
+function Pie({
+  content,
+  nombre,
+  acento,
+}: {
+  content: Record<string, unknown>;
+  nombre: string;
+  acento?: string;
+}) {
+  const pie = section(content, 'footer');
+  const explorar = enlaces(pie, 'explore_links');
+  const legales = list(pie, 'legal_links').flatMap((item) => {
+    const label = text(item, 'label');
+    const url = text(item, 'url');
+    return label && url ? [{ label, url }] : [];
+  });
+  const contacto = list(pie, 'contact_lines').flatMap((item) => text(item, 'text') ?? []);
 
-function Pie() {
   return (
     <footer className="bg-coffee-950 px-6 py-14 text-coffee-200">
-      <div className="mx-auto grid max-w-7xl gap-10 border-b border-white/10 pb-10 md:grid-cols-3">
+      <div className="mx-auto grid max-w-7xl gap-10 border-b border-white/10 pb-10 md:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="font-serif text-2xl font-bold text-white">Coffee Maker <span className="text-gold-400">Pro</span></p>
-          <p className="mt-3 max-w-sm text-sm leading-relaxed text-coffee-300">Café de especialidad en casa, con molienda fresca y extracción profesional.</p>
+          <p className="font-serif text-2xl font-bold text-white">
+            {nombre}
+            {acento ? <span className="text-gold-400">{acento}</span> : null}
+          </p>
+          {text(pie, 'about') && (
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-coffee-300">
+              {text(pie, 'about')}
+            </p>
+          )}
         </div>
-        <div>
-          <p className="font-bold text-white">Explora</p>
-          <div className="mt-4 flex flex-col gap-2 text-sm"><a href="#experiencia">Experiencia</a><a href="#recetas">Recetas</a><a href="#kit">Kit incluido</a></div>
-        </div>
-        <div>
-          <p className="font-bold text-white">Compra con confianza</p>
-          <p className="mt-4 text-sm leading-7">Envío gratis · Pago contraentrega<br />Garantía de 12 meses</p>
-        </div>
+
+        {explorar.length > 0 && (
+          <div>
+            <p className="font-bold text-white">{text(pie, 'explore_label') ?? 'Explora'}</p>
+            <div className="mt-4 flex flex-col gap-2 text-sm">
+              {explorar.map((link) => (
+                <a key={link.anchor} className="hover:text-gold-400" href={`#${link.anchor}`}>
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {legales.length > 0 && (
+          <div>
+            <p className="font-bold text-white">{text(pie, 'legal_label') ?? 'Legal'}</p>
+            <div className="mt-4 flex flex-col gap-2 text-sm">
+              {legales.map((link) => (
+                <a
+                  key={link.url}
+                  className="hover:text-gold-400"
+                  href={link.url}
+                  rel="noreferrer nofollow"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {contacto.length > 0 && (
+          <div>
+            <p className="font-bold text-white">
+              {text(pie, 'contact_label') ?? 'Compra con confianza'}
+            </p>
+            <div className="mt-4 space-y-1 text-sm leading-6">
+              {contacto.map((linea) => (
+                <p key={linea}>{linea}</p>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-      <p className="mx-auto max-w-7xl pt-6 text-xs text-coffee-400">Coffee Maker Pro. Todos los derechos reservados.</p>
+
+      <p className="mx-auto max-w-7xl pt-6 text-xs text-coffee-400">
+        © {new Date().getFullYear()} {nombre}
+        {acento ?? ''}. {text(pie, 'copyright') ?? 'Todos los derechos reservados.'}
+      </p>
     </footer>
   );
 }

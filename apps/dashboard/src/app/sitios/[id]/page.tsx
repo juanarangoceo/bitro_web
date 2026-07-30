@@ -51,11 +51,37 @@ export default async function SitioPage({ params, searchParams }: Props) {
   const oferta = primero(sitio.offers);
   const canonico = (sitio.domains ?? []).find((d) => d.is_canonical && d.status === 'active');
 
-  let schema: ContentSchema;
+  // Que el sitio exista y su plantilla no se pueda leer son dos fallos
+  // distintos, y confundirlos costó una tarde: el editor devolvía 404 sobre una
+  // landing publicada y en línea. Pasa cuando la versión a la que el sitio está
+  // fijado sale del catálogo visible —`development`, `hidden`, `deprecated`— o
+  // cuando su `content_schema` no valida. El sitio no desaparece por eso, así
+  // que se dice qué pasa en vez de fingir que no existe.
+  let schema: ContentSchema | null = null;
   try {
     schema = parseContentSchema(version?.content_schema);
   } catch {
-    notFound();
+    schema = null;
+  }
+
+  if (!schema) {
+    return (
+      <Shell sesion={sesion} titulo={sitio.name} volverA={{ href: '/', texto: 'Tus landings' }}>
+        <div className="tarjeta space-y-3 p-6 text-sm">
+          <p className="font-medium">No se puede abrir el editor de esta landing.</p>
+          <p className="text-ink-600">
+            {version
+              ? 'La plantilla a la que está fijada tiene un contrato de contenido que no se pudo leer.'
+              : 'No se pudo leer la versión de plantilla a la que está fijada esta landing.'}{' '}
+            La página publicada no se ve afectada y sigue en línea.
+          </p>
+          <p className="text-ink-500">
+            Escríbenos indicando el identificador <code className="font-mono">{sitio.id}</code> para
+            que lo revisemos.
+          </p>
+        </div>
+      </Shell>
+    );
   }
 
   const contenido = (borrador?.content_json ?? {}) as Record<string, unknown>;

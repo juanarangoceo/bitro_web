@@ -61,6 +61,48 @@ export function HotspotsInteractivos({
   );
 }
 
+/**
+ * Vídeo con carátula propia.
+ *
+ * Un `<video controls>` a secas pinta un rectángulo negro hasta que el
+ * navegador descarga el primer fotograma, y en medio de una sección clara eso
+ * se lee como un hueco roto. Aquí no se descarga nada hasta que alguien pulsa:
+ * en móvil, que es de donde llega el tráfico de campañas, evita además varios
+ * megabytes de vídeo que la mayoría no va a ver.
+ */
+export function ReproductorVideo({ src, label }: { src: string; label?: string }) {
+  const [activo, setActivo] = useState(false);
+
+  if (activo) {
+    return (
+      <video
+        className="aspect-[9/16] w-full rounded-[2rem] bg-coffee-950 shadow-2xl md:aspect-video"
+        controls
+        autoPlay
+        playsInline
+        preload="metadata"
+      >
+        <source src={src} type="video/mp4" />
+      </video>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setActivo(true)}
+      aria-label={label ? `Reproducir: ${label}` : 'Reproducir el vídeo'}
+      className="group relative grid aspect-[9/16] w-full place-items-center overflow-hidden rounded-[2rem] bg-gradient-to-br from-coffee-800 to-coffee-950 shadow-2xl md:aspect-video"
+    >
+      <span className="grid h-20 w-20 place-items-center rounded-full bg-white/95 shadow-xl transition group-hover:scale-110">
+        <svg viewBox="0 0 24 24" fill="currentColor" className="ml-1 h-8 w-8 text-coffee-900" aria-hidden="true">
+          <path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l11.14-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14Z" />
+        </svg>
+      </span>
+    </button>
+  );
+}
+
 export function RecetasInteractivas({ recipes }: { recipes: Receta[] }) {
   const [activa, setActiva] = useState<number | null>(null);
   const receta = activa === null ? null : recipes[activa];

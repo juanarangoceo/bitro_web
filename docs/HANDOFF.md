@@ -29,6 +29,13 @@
 - Publicación y rollback en modo soporte, revisión humana, dominios vía API de
   Vercel, pedidos, métricas, consumo de IA, notas internas y auditoría.
 
+**Pendiente de aplicar en `zdhdhlqnwubckdnqonxp`:** la migración
+`0014_template_versions_instaladas.sql`. Está validada contra el Postgres
+efímero (`AISLAMIENTO MULTI-TENANT: OK`) pero **no** aplicada al proyecto real.
+Hasta que se aplique, el editor del cliente responde 404 sobre cualquier sitio
+fijado a una versión que no esté `published` — que es hoy el caso del piloto,
+migrado a la 1.2.0 en `development`.
+
 **Coffee Maker 1.2 — en revisión:**
 
 - Se creó `coffeeMakerV12` como componente independiente; `1.0` y `1.1`
@@ -40,6 +47,29 @@
 - La versión `1.2.0` está sembrada en `development` y el borrador del piloto fue
   migrado a ella. Su snapshot público sigue en `1.1` hasta aprobar y publicar.
 - Preview del piloto: `/preview/76b9f0ec-be6e-4492-a281-f97edccb3297`.
+
+**Segunda pasada sobre la 1.2 (30 jul, tarde):**
+
+- **Marca, navegación y pie salieron del código.** La primera 1.2 los traía
+  escritos dentro de `CoffeeMakerV12`. El segundo tenant que instalara la
+  plantilla habría visto la marca del primero en su cabecera. Ahora son las
+  secciones `brand` y `footer` del `content_schema`, fuera del alcance de la IA.
+- El pie tiene columna legal. Meta y Google exigen que la política de datos sea
+  alcanzable desde la landing, y esa política es del cliente: sin enlaces
+  cargados la columna no se dibuja.
+- Menú desplegable en móvil. Sin él la cabecera se quedaba con logotipo y botón,
+  y la landing perdía toda navegación en el dispositivo del que llega la campaña.
+- **El recuadro de ahorro ya no sale vacío.** Dibujaba su titular dentro de un
+  bloque destacado y la cifra no existía en el contrato (`savings_value`).
+- Tarjeta de oferta con producto, bonos tachados, medio de pago y cierre; recibo
+  con total diario y nota; vídeo con carátula en vez de un `<video controls>` que
+  pintaba un rectángulo negro hasta descargar el primer fotograma.
+- Diferencias que quedan frente a la referencia y **son datos, no código**:
+  `offers.compare_at_amount` está vacío (por eso no hay precio tachado ni
+  "Ahorras %"), `show_countdown` está en `false`, el borrador conserva 3 puntos
+  de hotspot en vez de 4 y no tiene enlaces legales cargados.
+- Sigue fuera de alcance a propósito: el imán de leads con captura de correo, el
+  blog y el login del sitio de referencia (§2.3).
 
 **Verificación al cierre de esta fase:**
 

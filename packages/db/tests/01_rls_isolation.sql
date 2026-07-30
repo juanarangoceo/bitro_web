@@ -36,9 +36,18 @@ values
   ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'cccccccc-cccc-cccc-cccc-cccccccccccc',
    '1.0.0', 'published', 'pruebaV1', '{}'::jsonb, '{}'::jsonb, '{}'::jsonb);
 
+-- Versión fuera del catálogo visible (`development`). Solo A la tiene instalada:
+-- sirve para comprobar a la vez que A puede leer el contrato de su propia
+-- plantilla y que eso no se lo abre a B.
+insert into public.template_versions
+  (id, template_id, version, status, component_key, manifest_json, content_schema, default_content)
+values
+  ('dddddddd-dddd-dddd-dddd-dddddddddd02', 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+   '2.0.0', 'development', 'pruebaV2', '{}'::jsonb, '{}'::jsonb, '{}'::jsonb);
+
 insert into public.sites (id, tenant_id, template_version_id, name) values
   ('e1111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-   'dddddddd-dddd-dddd-dddd-dddddddddddd', 'Landing A'),
+   'dddddddd-dddd-dddd-dddd-dddddddddd02', 'Landing A'),
   ('e2222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
    'dddddddd-dddd-dddd-dddd-dddddddddddd', 'Landing B');
 
@@ -106,6 +115,14 @@ select pg_temp.assert_eq(
   (select count(*) from public.tenant_members
    where tenant_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'), 0,
   'A NO ve las membresías del tenant B');
+
+-- Su sitio está fijado a una versión en `development`, fuera del catálogo. Si no
+-- la ve, el editor no puede dibujarse y el dashboard responde 404 sobre una
+-- landing que existe (0014).
+select pg_temp.assert_eq(
+  (select count(*) from public.template_versions
+   where id = 'dddddddd-dddd-dddd-dddd-dddddddddd02'), 1,
+  'A SÍ ve la versión de plantilla instalada en su sitio, aunque no esté publicada');
 
 -- Notas internas del equipo Nitro Web. La defensa aquí es doble: RLS sin
 -- políticas (0 filas) y además GRANT revocado (0008_grants.sql). El GRANT actúa
@@ -278,6 +295,13 @@ select pg_temp.assert_eq((select count(*) from public.sites), 1,
 select pg_temp.assert_eq(
   (select count(*) from public.sites where id = 'e1111111-1111-1111-1111-111111111111'), 0,
   'B NO ve el sitio del tenant A');
+
+-- La contrapartida de 0014: ver la plantilla que uno tiene instalada no puede
+-- convertirse en ver las que tienen instaladas los demás.
+select pg_temp.assert_eq(
+  (select count(*) from public.template_versions
+   where id = 'dddddddd-dddd-dddd-dddd-dddddddddd02'), 0,
+  'B NO ve la versión sin publicar que solo A tiene instalada');
 
 
 -- ===========================================================================

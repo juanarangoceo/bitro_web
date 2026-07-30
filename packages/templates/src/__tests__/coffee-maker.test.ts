@@ -4,6 +4,7 @@ import {
   compileContentValidator,
   parseContentSchema,
   validateManifest,
+  type ContentSchema,
 } from '@nitro-web/contracts';
 import { coffeeMakerManifest } from '../coffee-maker/manifest';
 import { coffeeMakerContentSchema } from '../coffee-maker/schema';
@@ -12,6 +13,7 @@ import { coffeeMakerManifestV11 } from '../coffee-maker/manifest-v1-1';
 import { coffeeMakerContentSchemaV11 } from '../coffee-maker/schema-v1-1';
 import { coffeeMakerDefaultContentV11 } from '../coffee-maker/default-content-v1-1';
 import { coffeeMakerManifestV12 } from '../coffee-maker/manifest-v1-2';
+import { coffeeMakerContentSchemaV12 } from '../coffee-maker/schema-v1-2';
 import { coffeeMakerDefaultContentV12 } from '../coffee-maker/default-content-v1-2';
 import { isComponentRegistered } from '../registry';
 
@@ -161,6 +163,39 @@ describe('coffee-maker 1.2', () => {
     expect(coffeeMakerDefaultContentV12.problem?.video_url).toContain('cloudinary.com');
     expect(coffeeMakerDefaultContentV12.recipes?.items).toHaveLength(4);
     expect(coffeeMakerDefaultContentV12.bundle?.items).toHaveLength(2);
-    expect(coffeeMakerDefaultContentV12.savings?.current_annual_amount).toBe(7300000);
+    // 22.000 al día por 365 días. El gasto anual y el total diario tienen que
+    // cuadrar entre sí: son la misma factura leída de dos formas, y una
+    // incoherencia ahí es exactamente el detalle que destruye el argumento.
+    expect(coffeeMakerDefaultContentV12.savings?.current_total_amount).toBe(22000);
+    expect(coffeeMakerDefaultContentV12.savings?.current_annual_amount).toBe(8030000);
+  });
+
+  it('no deja el recuadro del ahorro sin cifra', () => {
+    // El defecto que motivó la 1.2: `savings_headline` se dibujaba dentro de un
+    // recuadro destacado y la cifra no existía en el contrato, así que el bloque
+    // salía vacío en producción.
+    const savings = seccion(coffeeMakerContentSchemaV12, 'savings');
+    expect(savings.fields.savings_value).toBeDefined();
+    expect(coffeeMakerDefaultContentV12.savings?.savings_value).toBeTruthy();
+  });
+
+  it('saca marca, navegación y pie del código de la plantilla', () => {
+    // Con la marca escrita dentro del componente, el segundo tenant que
+    // instalara la plantilla vería en su cabecera la marca del primero.
+    expect(seccion(coffeeMakerContentSchemaV12, 'brand').fields.name?.required).toBe(true);
+    expect(coffeeMakerDefaultContentV12.brand?.name).toBeTruthy();
+    expect(coffeeMakerDefaultContentV12.footer?.explore_links).toBeInstanceOf(Array);
+  });
+
+  it('deja marca y pie fuera del alcance de la IA', () => {
+    // Un modelo que redacte la columna legal inventa una política que no existe.
+    expect(coffeeMakerManifestV12.ai_sections).not.toContain('brand');
+    expect(coffeeMakerManifestV12.ai_sections).not.toContain('footer');
   });
 });
+
+function seccion(schema: ContentSchema, key: string) {
+  const encontrada = schema.sections.find((s) => s.key === key);
+  if (!encontrada) throw new Error(`La 1.2 debería declarar la sección '${key}'`);
+  return encontrada;
+}
